@@ -156,6 +156,7 @@ export default {
           ElMessage.success(text.value.loginSuccess);
           const username = response.data.username || " ";
           localStorage.setItem('username', username);
+          sessionStorage.setItem('userEmail', form.value.email);
           sessionStorage.setItem('token', true);
           router.push('/case-query')
         }

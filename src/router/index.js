@@ -13,7 +13,20 @@ const routes = [
   {
     path: '/case-query',
     name: 'case-query',
-    component: () => import('@/views/CaseQueryLayout.vue'),
+    component: () => import('../views/CaseQueryLayout.vue'),
+    redirect: '/case-query/search',
+    children: [
+      {
+        path: '/case-query/search',
+        name: 'case-list',
+        component: () => import('../views/SearchCases.vue'),
+      },
+      {
+        path:'/case-query/favorite',
+        name: 'favorite-case',
+        component: () => import('../views/FavoriteCases.vue'),
+      }
+    ]
   }
 ];
 
