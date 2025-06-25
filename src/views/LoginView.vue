@@ -71,7 +71,8 @@
 <script>
 import { ref, computed, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-
+import api from "../api/index"
+import { useRouter } from 'vue-router'
 const validateEmail = (email) => {
   return /^[\w.-]+@[\w.-]+\.[a-zA-Z]{2,}$/.test(email)
 }
@@ -143,10 +144,27 @@ export default {
             welcomeBack: 'Welcome back',
           }
     })
-    const onLogin = () => {
-      ElMessage.success(text.value.loginSuccess)
+    const router = useRouter()
+    const onLogin = async() => {
+      try {
+        const params = {
+          email: form.value.email,
+          password: form.value.password
+        };
+        const response = await api.login(params);
+        if(response.success === true) {
+          ElMessage.success(text.value.loginSuccess);
+          const username = response.data.username || " ";
+          localStorage.setItem('username', username);
+          sessionStorage.setItem('token', true);
+          router.push('/case-query')
+        }
+      } catch (error) {
+        ElMessage.error(text.value.loginFail);
+        return;
+      }
     }
-    const onRegister = () => {
+    const onRegister = async() => {
       if (!validateEmail(form.value.email)) {
         ElMessage.error(text.value.emailError)
         return
@@ -159,8 +177,25 @@ export default {
         ElMessage.error(text.value.pwdWeak)
         return
       }
-      ElMessage.success(text.value.regSuccess)
-      isLogin.value = true
+      try {
+        const params = {
+          email: form.value.email,
+          password: form.value.password
+        };
+        const response = await api.register(params);
+        if (response.success === true) {
+          ElMessage.success(text.value.regSuccess);
+          form.value.email = '';
+          form.value.password = '';
+          form.value.confirm = '';
+          isLogin.value = true; // 注册成功后切换到登录状态
+        } else {
+          ElMessage.error(response.message || '注册失败，请稍后再试');
+          return;
+        }
+      } catch (error) {
+        ElMessage.error('注册失败，请稍后再试');
+      }
     }
     return {
       isLogin,

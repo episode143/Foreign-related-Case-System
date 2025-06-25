@@ -1,35 +1,36 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory } from "vue-router";
 
 const routes = [
   {
-    path: '/',
-    redirect: '/login'
+    path: "/",
+    redirect: "/login",
   },
   {
-    path: '/about',
-    name: 'about',
-    component: () => import(/* webpackChunkName: "about" */ '../views/AboutView.vue')
-  },
-  {
-    path: '/register',
-    name: 'register',
-    component: () => import('../views/RegisterView.vue')
-  },
-  {
-    path: '/login',
-    name: 'login',
-    component: () => import('../views/LoginView.vue')
+    path: "/login",
+    name: "login",
+    component: () => import("../views/LoginView.vue"),
   },
   {
     path: '/case-query',
     name: 'case-query',
-    component: () => import('../views/CaseQueryView.vue')
+    component: () => import('@/views/CaseQueryLayout.vue'),
   }
-]
+];
 
 const router = createRouter({
   history: createWebHistory(process.env.BASE_URL),
-  routes
-})
+  routes,
+});
 
-export default router
+router.beforeEach((to, from, next) => {
+  const isAuth = sessionStorage.getItem('token') === 'true';
+  if (!isAuth && to.path !== '/login') {
+    next('/login');
+  } else if (isAuth && to.path === '/login') {
+    next();
+  } else {
+    next();
+  }
+});
+
+export default router;
