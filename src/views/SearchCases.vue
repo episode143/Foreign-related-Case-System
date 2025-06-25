@@ -57,6 +57,7 @@
       </div>
     </div>
     <div style="grid-area: case-content-area">
+      <!-- 顶部栏 -->
       <div
         style="
           width: 100%;
@@ -66,10 +67,29 @@
           position: relative;
           background-color: white;
           border: 1px solid rgb(177.3, 179.4, 183.6);
-          border-bottom: none;
+          display: flex;
+          align-items: center;
+          font-size: 20px;
+          font-weight: bold;
         "
-      ></div>
-      <div style="width: 100%; border: 1px solid rgb(177.3, 179.4, 183.6); height: 545px; background-color: white; border-bottom-right-radius: 15px; border-bottom-left-radius: 15px">
+      >
+      </div>
+      <!-- 内容区 -->
+      <div
+        style="
+          width: 100%;
+          border: 1px solid rgb(177.3, 179.4, 183.6);
+          border-top: none;
+          height: 545px;
+          background-color: white;
+          border-bottom-right-radius: 15px;
+          border-bottom-left-radius: 15px;
+          padding: 24px 32px 0 32px;
+          box-sizing: border-box;
+          overflow-y: auto;
+        "
+      >
+        <div v-html="caseDetailHtml"></div>
       </div>
     </div>
   </div>
@@ -77,6 +97,8 @@
 
 <script>
 import { ref, computed } from "vue";
+import MarkdownIt from "markdown-it";
+
 export default {
   name: "SearchCases",
   setup() {
@@ -146,11 +168,40 @@ export default {
       return cases.value.slice(start, start + 6);
     });
 
+    // 假设后端返回的 markdown 数据
+    const caseDetailMarkdown = ref(`
+### 法律案件解释：多诺霍诉史蒂文森案 (Donoghue v Stevenson)
+
+这是一份案例解释——一个在普通法系国家（如英国、加拿大、澳大利亚等）具有里程碑意义的法律案件：多诺霍诉史蒂文森案（Donoghue v Stevenson [1932] AC 562），又被称为“蜗牛案”。这个案件确立了现代侵权法中最重要的原则之一——**疏忽侵权 (Negligence)** 的原则。
+
+#### 1. 案件名称
+多诺霍诉史蒂文森案 (Donoghue v Stevenson)，或称“蜗牛案”。
+案件编号: [1932] AC 562
+
+#### 2. 案件背景/事实 (Background/Facts)
+1932年，一位名叫梅多诺霍（May Donoghue）的女士和朋友在苏格兰佩斯利的一家咖啡馆喝饮料，她的朋友为她点了一杯由生产商史蒂文森（Stevenson）公司生产的姜汁啤酒。当多诺霍女士喝到一半时，她发现瓶子里有一只已经腐烂的蜗牛尸体。
+
+看到蜗牛后，多诺霍女士受到了惊吓，并大病和因此上了胃肠炎和严重的精神打击。由于姜汁啤酒是朋友购买的，多诺霍女士与咖啡馆老板仅仅没有直接合同关系，普通法的传统，并没有合同关系就不能索赔。因此，多诺霍女士决定直接起诉案件中啤酒的生产商史蒂文森公司，理由是其疏忽（negligence）。她的律师，史蒂文森公司在生产过程中未能采取相应注意，导致蜗牛进入了瓶子，并对消费者造成了伤害。
+
+#### 3. 法律争议焦点 (Legal Issue)
+本案的核心法律争议是：
+
+**在没有直接合同关系的前提下，产品制造商对最终消费者是否负有避免疏忽行为的法律责任？**
+（即：是否在一个制造商对其产品最终使用者负有的“注意义务”（Duty of Care），即使两者之间没有合同关系？）
+
+#### 4. 法院判决 (Court Decision)
+英国上议院（House of Lords），于1932年做出了具有深远影响力的判决。上议院认为买卖双方的契约关系的狭义观点被突破，多诺霍女士
+    `);
+
+    const md = new MarkdownIt();
+    const caseDetailHtml = computed(() => md.render(caseDetailMarkdown.value));
+
     return {
       textarea,
       page,
       cases,
       pagedCases,
+      caseDetailHtml
     };
   },
 };
