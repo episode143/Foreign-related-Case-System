@@ -1,7 +1,7 @@
 <template>
   <div class="common-layout">
     <el-container>
-      <el-aside :width="collapsed ? '64px' : '200px'" class="aside-bar">
+      <el-aside :width="collapsed ? '64px' : '160px'" class="aside-bar">
         <div class="menu-toggle" @click="collapsed = !collapsed">
           <el-icon><Menu /></el-icon>
         </div>
@@ -28,14 +28,14 @@
         <el-header class="header-bar">
           <div class="header-title">
             <el-icon style="margin-right: 8px"><Notebook /></el-icon>
-            <span>{{ lang === "zh" ? "涉外案例查询分析系统" : "Foreign Case Query & Analysis System" }}</span>
+            <span style="font-size: 18px;">{{ lang === "zh" ? "涉外案例查询分析系统" : "Foreign Case Query & Analysis System" }}</span>
           </div>
           <div class="header-actions">
             <el-switch v-model="lang" :active-value="'en'" :inactive-value="'zh'" active-text="EN" inactive-text="中文" style="margin-right: 24px" @change="changeLang" />
             <el-dropdown trigger="hover" placement="bottom-end">
               <span class="avatar-dropdown" style="display: inline-block">
                 <div style="height: 32px; width: 32px; border-radius: 50%; background-color: #1883ff; display: flex; justify-content: center; align-items: center">
-                  <i class="iconfont icon-farendaibiao" style="font-size: 20px; color: white; border: none"></i>
+                  <i class="iconfont icon-yonghu" style="font-size: 20px; color: white; border: none"></i>
                 </div>
               </span>
               <template #dropdown>
@@ -145,7 +145,7 @@ export default {
   justify-content: center;
   height: 56px;
   cursor: pointer;
-  font-size: 22px;
+  font-size: 18px;
 }
 .el-menu-vertical-demo {
   border-right: none;
@@ -157,7 +157,7 @@ export default {
   background: #fff;
   height: 64px;
   padding: 0 24px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: none;
 }
 .header-title {
   display: flex;
@@ -174,5 +174,9 @@ export default {
   background: #fff;
   min-height: calc(100vh - 64px);
   padding: 0;
+}
+::v-deep .el-menu-item {
+  border-radius: 10px;
+  overflow: hidden;
 }
 </style>

@@ -15,14 +15,14 @@
         align-items: center;
       "
     >
-      <i class="iconfont icon-falvfagui" style="font-size: 90px; color: #1883ff"></i>
+      <i class="iconfont icon-falvfagui" style="font-size: 90px; color: #409EFF"></i>
     </div>
     <div style="font-size: 30px; color: #222 ;position: absolute; left: 120px; top: 385px; font-weight: 700;">{{ text.title }}</div>
     <div class="center-box">
       <div class="login-card">
         <div style="display: flex; align-items: center; justify-content: center; width: 100%; height: 70px">
           <div style="height: 78px; width: 78px; background-color: white; border-radius: 50%; display: flex; justify-content: center; align-items: center;">
-            <i class="iconfont icon-faren" style="font-size: 50px; color: #1883ff"></i>
+            <i class="iconfont icon-faren" style="font-size: 50px; color: #409EFF"></i>
           </div>
         </div>
         <h2 class="welcome">{{ isLogin? text.welcome:text.register }}</h2>
@@ -247,7 +247,7 @@ export default {
   border-radius: 50%;
   margin-bottom: 18px;
   object-fit: cover;
-  box-shadow: 0 2px 8px #1883ff22;
+  box-shadow: 0 2px 8px #409EFF22;
 }
 .welcome {
   font-size: 1.6rem;
@@ -263,7 +263,7 @@ export default {
   width: 100%;
   font-size: 1.1rem;
   letter-spacing: 1px;
-  background: #1883ff;
+  background: #409EFF;
   border: none;
 }
 .signup-tip {
@@ -273,7 +273,7 @@ export default {
   text-align: center;
 }
 .signup-link {
-  color: #1883ff;
+  color: #409EFF;
   margin-left: 4px;
   text-decoration: underline;
   cursor: pointer;
@@ -281,7 +281,7 @@ export default {
 .system-title {
   margin-top: 24px;
   font-size: 1.1rem;
-  color: #1883ff;
+  color: #409EFF;
   font-weight: bold;
   letter-spacing: 1px;
 }

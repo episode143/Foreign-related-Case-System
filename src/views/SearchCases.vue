@@ -1,7 +1,7 @@
 <template>
   <div class="search-grid-container">
     <div style="grid-area: input-area; background-color: transparent">
-      <div style="width: 100%; height: 85%; background-color: white; border-radius: 15px; border: 1px solid rgb(177.3, 179.4, 183.6); position: relative">
+      <div style="width: 100%; height: 85%; background-color: white; border-radius: 15px; border: 1px solid rgb(221.7, 222.6, 224.4); position: relative">
         <button
           style="
             position: absolute;
@@ -36,7 +36,7 @@
           <div v-for="item in pagedCases" :key="item.id" class="case-card-new">
             <div class="case-card-content">
               <div class="case-card-header">
-                <i class="iconfont icon-xiaofadianwenzhang" style="font-size: 32px; color: #333; margin-right: 10px"></i>
+                <i class="iconfont icon-xiaofadianwenzhang" style="font-size: 26px; color: #333; margin-right: 10px"></i>
                 <span class="case-title">{{ item.title }}</span>
               </div>
               <div class="case-card-row">
@@ -56,40 +56,55 @@
         <el-pagination size="small" layout="prev, pager, next" :total="cases.length" :page-size="6" v-model:current-page="page" />
       </div>
     </div>
-    <div style="grid-area: case-content-area">
+    <div style="grid-area: case-content-area;">
       <!-- 顶部栏 -->
       <div
         style="
           width: 100%;
-          border-top-left-radius: 15px;
-          border-top-right-radius: 15px;
+          border-top-left-radius: 10px;
+          border-top-right-radius: 10px;
           height: 50px;
           position: relative;
           background-color: white;
-          border: 1px solid rgb(177.3, 179.4, 183.6);
+          border: 1px solid rgb(221.7, 222.6, 224.4);
           display: flex;
           align-items: center;
           font-size: 20px;
           font-weight: bold;
+          display: flex;
+          align-items: center;
         "
       >
+      <span style="font-weight: 600; font-size: 18px; color: #333; margin-left: 30px;">案件：{{ cases[selectIndex].title }}</span>
+      <span style="font-weight: 600; font-size: 18px; color: #409EFF; margin-left: 100px;">智能案件分析</span>
+      <span
+        style="font-weight: 600; font-size: 18px; color: #909399; margin-left: 100px; cursor: pointer;"
+        @click="openOriginUrl"
+      >
+        查看原始判决文书
+      </span>
+      <i
+        class="iconfont icon-xiazai"
+        style="font-size: 16px; margin-left: 60px; color: rgb(121.3, 187.1, 255); position: absolute; right: 40px; cursor: pointer;"
+        @click="downloadWord"
+      ></i>
       </div>
       <!-- 内容区 -->
       <div
         style="
           width: 100%;
-          border: 1px solid rgb(177.3, 179.4, 183.6);
+          border: 1px solid rgb(221.7, 222.6, 224.4);
           border-top: none;
           height: 545px;
           background-color: white;
-          border-bottom-right-radius: 15px;
-          border-bottom-left-radius: 15px;
+          border-bottom-right-radius: 10px;
+          border-bottom-left-radius: 10px;
           padding: 24px 32px 0 32px;
           box-sizing: border-box;
           overflow-y: auto;
         "
       >
-        <div v-html="caseDetailHtml"></div>
+        <div v-html="caseDetailHtml" style="font-size:small;"></div>
       </div>
     </div>
   </div>
@@ -98,13 +113,15 @@
 <script>
 import { ref, computed } from "vue";
 import MarkdownIt from "markdown-it";
+import HtmlDocx from "html-docx-js/dist/html-docx";
+import { saveAs } from "file-saver";
 
 export default {
   name: "SearchCases",
   setup() {
     const textarea = ref("");
     const page = ref(1);
-    // 示例数据
+    const selectIndex = ref(0);
     const cases = ref([
       {
         id: 1,
@@ -116,7 +133,7 @@ export default {
       },
       {
         id: 2,
-        title: "案例2",
+        title: "张华诉星辰公寓案",
         country: "中国",
         court: "北京市中级法院",
         date: "2024.12.1",
@@ -124,7 +141,7 @@ export default {
       },
       {
         id: 3,
-        title: "案例3",
+        title: "丽诉味来食品公司案",
         country: "英国",
         court: "伦敦高等法院",
         date: "2024.11.1",
@@ -132,7 +149,7 @@ export default {
       },
       {
         id: 4,
-        title: "案例4",
+        title: "彼得森诉数智互联案",
         country: "法国",
         court: "巴黎地方法院",
         date: "2024.10.1",
@@ -140,7 +157,7 @@ export default {
       },
       {
         id: 5,
-        title: "案例5",
+        title: "劳埃德劳动纠纷案",
         country: "德国",
         court: "柏林法院",
         date: "2024.9.1",
@@ -148,7 +165,7 @@ export default {
       },
       {
         id: 6,
-        title: "案例6",
+        title: "东京地铁连环事故案",
         country: "日本",
         court: "东京地方法院",
         date: "2024.8.1",
@@ -167,8 +184,7 @@ export default {
       const start = (page.value - 1) * 6;
       return cases.value.slice(start, start + 6);
     });
-
-    // 假设后端返回的 markdown 数据
+    const caseOriginUrl = ref('https://www.courtlistener.com/opinion/4328762/mike-macmann-v-mike-matthes/?q=mike');
     const caseDetailMarkdown = ref(`
 ### 法律案件解释：多诺霍诉史蒂文森案 (Donoghue v Stevenson)
 
@@ -196,12 +212,35 @@ export default {
     const md = new MarkdownIt();
     const caseDetailHtml = computed(() => md.render(caseDetailMarkdown.value));
 
+    // 下载为 Word
+    const downloadWord = () => {
+      const html = `
+        <html>
+          <head><meta charset="utf-8"/></head>
+          <body>
+            ${caseDetailHtml.value}
+          </body>
+        </html>
+      `;
+      const blob = HtmlDocx.asBlob(html);
+      saveAs(blob, `${cases.value[selectIndex.value].title || '案件详情'}.docx`);
+    };
+
+    const openOriginUrl = () => {
+      window.open(caseOriginUrl.value, "_blank");
+    };
+
     return {
       textarea,
       page,
       cases,
       pagedCases,
-      caseDetailHtml
+      caseDetailHtml,
+      selectIndex,
+      downloadWord,
+      caseDetailMarkdown,
+      caseOriginUrl,
+      openOriginUrl,
     };
   },
 };
@@ -213,7 +252,7 @@ export default {
   width: 100%;
   height: 100%;
   display: grid;
-  grid-template-columns: 1fr 12fr 1fr 24fr 1fr;
+  grid-template-columns: 1fr 10fr 1fr 24fr 1fr;
   grid-template-rows: 20fr 100fr;
   grid-template-areas:
     "blank1 input-area blank2 case-content-area blank3"
@@ -245,7 +284,7 @@ export default {
 }
 .case-card-new {
   background: #f2f6fc;
-  border-radius: 16px;
+  border-radius: 14px;
   cursor: pointer;
   transition: box-shadow 0.2s;
   width: 100%;
@@ -253,7 +292,7 @@ export default {
   max-width: 100%;
   height: 100px;
   margin-bottom: -2px;
-  padding: 18px 24px 12px 18px;
+  padding: 16px 24px 12px 16px;
   display: flex;
   align-items: center;
   box-sizing: border-box;
@@ -267,8 +306,8 @@ export default {
   margin-bottom: 6px;
 }
 .case-title {
-  font-weight: bold;
-  font-size: 18px;
+  font-weight: middle;
+  font-size: 16px;
   color: #222;
 }
 .case-card-row {
@@ -278,32 +317,32 @@ export default {
   margin-bottom: 2px;
 }
 .case-country {
-  font-size: 16px;
+  font-size: 14px;
   color: #222;
   font-weight: light;
   margin-right: 24px;
 }
 .case-court {
-  font-size: 16px;
+  font-size: 14px;
   color: #222;
   font-weight: light;
   margin-right: 24px;
 }
 .case-date {
-  font-size: 16px;
+  font-size: 14px;
   color: #222;
   font-weight: light;
   margin-left: auto;
 }
 .case-tags {
-  font-size: 16px;
+  font-size: 14px;
   color: #222;
   font-weight: light;
 }
 .case-link {
   float: right;
-  color: #1883ff;
-  font-size: 18px;
+  color: rgb(115.2, 117.6, 122.4);
+  font-size: 14px;
   font-weight: bold;
   margin-left: auto;
   text-decoration: none;
