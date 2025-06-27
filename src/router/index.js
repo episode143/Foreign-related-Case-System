@@ -14,8 +14,13 @@ const routes = [
     path: '/case-query',
     name: 'case-query',
     component: () => import('../views/CaseQueryLayout.vue'),
-    redirect: '/case-query/search',
+    redirect: '/case-query/home',
     children: [
+      {
+        path: '/case-query/home',
+        name: 'query-home',
+        component: () => import('../views/HomeView.vue'),
+      },
       {
         path: '/case-query/search',
         name: 'case-list',

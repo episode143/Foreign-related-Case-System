@@ -91,7 +91,7 @@ export default {
     const handleMenuSelect = (index) => {
       activeMenu.value = index;
       if (index === "1") {
-        router.push("/case-query/search");
+        router.push("/case-query/home");
       } else if (index === "2") {
         router.push("/case-query/favorite");
       }
