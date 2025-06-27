@@ -4,7 +4,7 @@
       <!-- 案例列表区域 - 增加收缩功能 -->
       <div class="case-list" :class="{ 'collapsed': isCollapsed }">
         <div class="case-list-header">
-          <span>案件列表</span>
+          <span>{{ caseListText }}</span>
           <div class="toggle-btn" @click="toggleCollapse">
             <el-icon v-if="isCollapsed" class="expand-icon">
               <ArrowRightBold />
@@ -33,8 +33,8 @@
                   <span class="case-date">{{ item.date }}</span>
                 </div>
                 <div class="case-card-row">
-                  <span class="case-tags">标签：{{ item.tags }}</span>
-                  <a href="#" class="case-link" @click.prevent="viewCase(item.id)">查看</a>
+                  <span class="case-tags">{{ tagText }}：{{ item.tags }}</span>
+                  <a href="#" class="case-link" @click.prevent="viewCase(item.id)">{{ viewText }}</a>
                 </div>
               </div>
             </div>
@@ -50,17 +50,15 @@
             @current-change="handleCurrentChange"
           />
         </div>
-      </div>
-      
+      </div> 
       <!-- 分隔线 -->
-      <div class="divider" :class="{ 'collapsed': isCollapsed }"></div>
-      
+      <div class="divider" :class="{ 'collapsed': isCollapsed }"></div>     
       <!-- 案件详情区域 -->
       <div class="case-detail" :class="{ 'expanded': isCollapsed }">
         <div class="case-detail-header">
           <span class="case-title-large">{{ cases[selectIndex].title || '请选择案件' }}</span>
           <div class="header-actions">
-            <span class="action-item" @click="openOriginUrl">查看原始判决文书</span>
+            <span class="action-item" @click="openOriginUrl">{{ viewOriginalJudgmentText }}</span>
             <i class="iconfont icon-xiazai download-icon" @click="downloadWord"></i>
           </div>
         </div>
@@ -78,6 +76,7 @@ import MarkdownIt from "markdown-it";
 import HtmlDocx from "html-docx-js/dist/html-docx";
 import { saveAs } from "file-saver";
 import { StarFilled, ArrowLeftBold, ArrowRightBold } from '@element-plus/icons-vue'
+import { useStore } from "vuex";
 
 export default {
   name: "FavoriteCases",
@@ -87,11 +86,29 @@ export default {
     ArrowRightBold,
   },
   setup() {
+    const store = useStore();
     const page = ref(1);
     const pageSize = ref(4); // 每页显示4个案件
     const selectIndex = ref(0);
     const isCollapsed = ref(false); // 列表收缩状态
-    
+    const lang = computed(() => store.getters.lang);
+
+    const caseListText = computed(() => {
+      return lang.value === 'zh' ? '案例列表' : 'Case List';
+    });
+
+    const tagText = computed(() => {
+      return lang.value === 'zh' ? '标签' : 'tag';
+    });
+
+    const viewText = computed(() => {
+      return lang.value === 'zh' ? '查看' : 'view';
+    });
+
+    const viewOriginalJudgmentText = computed(() => {
+      return lang.value === 'zh' ? '查看原始判决文书' : 'View Original Judgment';
+    });
+
     const cases = ref([
       {
         id: 1,
@@ -254,7 +271,11 @@ export default {
       viewCase,
       handleCurrentChange,
       isCollapsed,
-      toggleCollapse
+      toggleCollapse,
+      caseListText,
+      tagText,
+      viewText,
+      viewOriginalJudgmentText,
     };
   },
 };

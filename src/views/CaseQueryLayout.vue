@@ -60,9 +60,10 @@
 </template>
 
 <script>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import { Menu, Star, Notebook, Search } from "@element-plus/icons-vue";
+import { useStore } from 'vuex';
 
 export default {
   components: {
@@ -73,13 +74,15 @@ export default {
   },
   setup() {
     const collapsed = ref(true);
-    const lang = ref(localStorage.getItem("lang") || "zh");
+    //const lang = ref(localStorage.getItem("lang") || "zh");
     const activeMenu = ref("1");
     const router = useRouter();
     const userEmail = ref(sessionStorage.getItem("userEmail") || "");
-
+    const store = useStore();
+    const lang = computed(() => store.getters.lang);
     const changeLang = (val) => {
-      localStorage.setItem("lang", val);
+      //localStorage.setItem("lang", val);
+      store.commit('setLang', val);
     };
 
     const logout = () => {

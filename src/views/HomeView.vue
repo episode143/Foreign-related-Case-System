@@ -3,7 +3,7 @@
     <!-- 收藏案件区域 -->
     <div class="favorite-cases" style="margin-bottom: 20px;">
       <div class="section-header">
-        <h3 style="font-weight: bold; display: inline-block;">{{ $store.getters.lang === 'zh' ? '最近收藏' : 'Recent favorites' }}</h3>
+        <h3 style="font-weight: bold; display: inline-block;">{{ recentFavoritesText }}</h3>
       </div>
       
       <div class="case-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 15px; margin-top: 15px;">
@@ -34,28 +34,28 @@
         <div class="filter-container" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
           <el-date-picker
             v-model="filter.date"
-            placeholder="选择时间"
+            :placeholder="timePlaceholderText"
             style="width: 120px;"
             :type="dateType"
           />
           <el-input 
             v-model="filter.court" 
-            placeholder="请输入法院名称" 
+            :placeholder="courtPlaceholderText" 
             style="width: 150px;"
           />
             <el-input 
             v-model="filter.country" 
-            placeholder="请输入国家" 
+            :placeholder="countryPlaceholderText"
             style="width: 150px;"
           />
           <el-input 
             v-model="filter.nature" 
-            placeholder="请输入案件性质" 
+            :placeholder="naturePlaceholderText"  
             style="width: 150px;"
           />
           
           <el-button @click="resetFilters" style="height: 34px; padding: 0 12px; line-height: 34px; font-size: 12px;">
-            重置
+            {{ resetButtonText }}
           </el-button>
         </div>
         
@@ -64,7 +64,7 @@
           <el-input 
             v-model="searchText" 
             type="textarea" 
-            placeholder="请输入您想查询案件的关键字，可输入案件名称、当事人、案号等"
+            :placeholder="searchPlaceholderText"
             class="fixed-height-textarea"
             :rows="5" 
             :autosize="false"  
@@ -95,12 +95,14 @@
 </template>
 
 <script>
-import { ref,  } from "vue";
+import { ref, computed  } from "vue";
 import { useRouter } from "vue-router";
+import { useStore } from 'vuex';
 
 export default {
   name: 'HomeView',
   setup() {
+    const store = useStore();
     const router = useRouter();
     const searchText = ref("");
     const filter = ref({
@@ -108,6 +110,35 @@ export default {
       court: "",
       country: "",
       nature: ""
+    });
+    const lang = computed(() => store.getters.lang);
+
+    const recentFavoritesText = computed(() => {
+      return lang.value === 'zh' ? '最近收藏' : 'Recently Favorited';
+    });
+
+    const timePlaceholderText = computed(() => {
+      return lang.value === 'zh' ? '请选择时间' : 'choose time';
+    });
+
+    const courtPlaceholderText = computed(() => {
+      return lang.value === 'zh' ? '请输入法院名称' : 'Enter court name';
+    });
+
+    const countryPlaceholderText = computed(() => {
+      return lang.value === 'zh' ? '请输入国家' : 'Enter country';
+    });
+
+    const naturePlaceholderText = computed(() => {
+      return lang.value === 'zh' ? '请输入案件性质' : 'Enter case nature';
+    });
+
+    const resetButtonText = computed(() => {
+      return lang.value === 'zh' ? '重置' : 'Reset';
+    });
+
+    const searchPlaceholderText = computed(() => {
+      return lang.value === 'zh' ? '请输入您想查询案件的关键字，可输入案件名称、当事人、案号等' : 'Enter keywords to search for cases, such as case names, parties, case numbers, etc.';
     });
     
     // 收藏案件数据
@@ -182,13 +213,19 @@ export default {
     
     
     return {
-     
       searchText,
       filter,
       favoriteCases,
       goToCaseDetail,
       searchCases,
       resetFilters,
+      recentFavoritesText,
+      timePlaceholderText,
+      courtPlaceholderText,
+      countryPlaceholderText,
+      naturePlaceholderText,
+      resetButtonText,
+      searchPlaceholderText
     };
   }
 }
