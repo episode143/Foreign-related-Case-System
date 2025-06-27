@@ -1,12 +1,18 @@
 <template>
   <div class="favorites-container">
-    <div class="header">
-      <h2>{{ lang === 'zh' ? '收藏案件' : 'Favorites'}}</h2>
-    </div>
     <div class="main-content">
-      <div class="case-list">
+      <!-- 案例列表区域 - 增加收缩功能 -->
+      <div class="case-list" :class="{ 'collapsed': isCollapsed }">
         <div class="case-list-header">
           <span>案件列表</span>
+          <div class="toggle-btn" @click="toggleCollapse">
+            <el-icon v-if="isCollapsed" class="expand-icon">
+              <ArrowRightBold />
+            </el-icon>
+            <el-icon v-else class="collapse-icon">
+              <ArrowLeftBold />
+            </el-icon>
+          </div>
         </div>
         <div class="case-list-content">
           <div class="case-list-flex">
@@ -45,7 +51,12 @@
           />
         </div>
       </div>
-      <div class="case-detail">
+      
+      <!-- 分隔线 -->
+      <div class="divider" :class="{ 'collapsed': isCollapsed }"></div>
+      
+      <!-- 案件详情区域 -->
+      <div class="case-detail" :class="{ 'expanded': isCollapsed }">
         <div class="case-detail-header">
           <span class="case-title-large">{{ cases[selectIndex].title || '请选择案件' }}</span>
           <div class="header-actions">
@@ -62,27 +73,24 @@
 </template>
 
 <script>
-import { ref, computed, watch } from "vue";
+import { ref, computed } from "vue";
 import MarkdownIt from "markdown-it";
 import HtmlDocx from "html-docx-js/dist/html-docx";
 import { saveAs } from "file-saver";
-import { StarFilled } from '@element-plus/icons-vue'
+import { StarFilled, ArrowLeftBold, ArrowRightBold } from '@element-plus/icons-vue'
 
 export default {
   name: "FavoriteCases",
   components: {
     StarFilled,
+    ArrowLeftBold,
+    ArrowRightBold,
   },
   setup() {
     const page = ref(1);
     const pageSize = ref(4); // 每页显示4个案件
     const selectIndex = ref(0);
-    const lang = ref(localStorage.getItem("lang") || "zh");
-    
-    // 监听 localStorage 中 lang 的变化
-    watch(() => localStorage.getItem("lang"), (newLang) => {
-      lang.value = newLang;
-    });
+    const isCollapsed = ref(false); // 列表收缩状态
     
     const cases = ref([
       {
@@ -225,11 +233,15 @@ export default {
     const handleCurrentChange = (val) => {
       page.value = val;
     };
+    
+    // 切换收缩状态
+    const toggleCollapse = () => {
+      isCollapsed.value = !isCollapsed.value;
+    };
 
     return {
       page,
       pageSize,
-      lang,
       cases,
       pagedCases,
       caseDetailHtml,
@@ -240,7 +252,9 @@ export default {
       openOriginUrl,
       unFavorite,
       viewCase,
-      handleCurrentChange
+      handleCurrentChange,
+      isCollapsed,
+      toggleCollapse
     };
   },
 };
@@ -251,37 +265,20 @@ export default {
 .favorites-container {
   position: relative;
   width: 100%;
-  height: 90vh;
+  height: 91vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   background-color: #f5f7fa;
 }
-
-/* 头部样式 */
-.header {
-  background-color: white;
-  border-bottom: 1px solid #ebeef5;
-  display: flex;
-  align-items: center;
-  padding: 0 32px;
-  height: 50px;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-}
-.header h2 {
-  font-size: 24px;
-  font-weight: 600;
-  color: #1f2329;
-  margin: 0;
-}
-
 /* 主要内容区 */
 .main-content {
   display: flex;
   flex: 1;
   overflow: hidden;
+  border-bottom: 3px;
+  position: relative;
 }
-
 /* 案件列表区域 */
 .case-list {
   width: 300px;
@@ -291,7 +288,20 @@ export default {
   position: relative;
   display: flex;
   flex-direction: column;
+  transition: width 0.3s ease, box-shadow 0.3s ease;
+  z-index: 10;
 }
+.case-list.collapsed {
+  width: 60px;
+  box-shadow: 0 0 8px rgba(0,0,0,0.08);
+}
+.case-list.collapsed .case-list-header span,
+.case-list.collapsed .case-list-content,
+.case-list.collapsed .pagination-container {
+  display: none;
+}
+
+/* 案件列表头部 */
 .case-list-header {
   background-color: #f0f5ff;
   padding: 16px 24px;
@@ -299,6 +309,9 @@ export default {
   font-weight: 500;
   color: #409EFF;
   border-bottom: 1px solid #e6f0ff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 /* 案件列表内容区 */
@@ -312,7 +325,7 @@ export default {
   display: none; /* Chrome, Safari, Edge */
 }
 
-/* 新的案件卡片样式 */
+/* 案件卡片样式 */
 .case-list-flex {
   display: flex;
   flex-direction: column;
@@ -348,10 +361,6 @@ export default {
 }
 .favorite-icon {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
   border-radius: 50%;
   transition: background-color 0.2s;
 }
@@ -359,7 +368,7 @@ export default {
   background-color: #f0f5ff;
 }
 .star-icon {
-  font-size: 14px;
+  font-size: 28px;
   color: #FFD700;
 }
 .case-card-row {
@@ -413,6 +422,20 @@ export default {
   font-size: 12px;
 }
 
+/* 分隔线 */
+.divider {
+  width: 6px;
+  background-color: #f0f5ff;
+  transition: width 0.3s ease;
+  position: relative;
+}
+.divider.collapsed {
+  width: 6px;
+}
+.divider.collapsed::before {
+  display: none;
+}
+
 /* 案件详情区域 */
 .case-detail {
   flex: 1;
@@ -420,14 +443,19 @@ export default {
   flex-direction: column;
   background-color: white;
   overflow: hidden;
+  transition: flex 0.3s ease;
 }
+.case-detail.expanded {
+  flex: 1;
+}
+
 .case-detail-header {
   border-bottom: 1px solid #ebeef5;
+  border-top: 1px solid #ebeef5;
   display: flex;
   align-items: center;
   padding: 0 24px;
-  height: 60px;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  height: 55px;
 }
 .case-title-large {
   font-weight: 600;
@@ -461,57 +489,10 @@ export default {
   flex: 1;
   padding: 24px 32px;
   box-sizing: border-box;
+  border-right: 3px solid #ebeef5;
   overflow-y: auto;
 }
 .case-detail-content::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Edge */
-}
-.markdown-content {
-  font-size: 15px;
-  line-height: 1.8;
-  color: #303133;
-}
-.markdown-content p {
-  margin-bottom: 20px;
-}
-.markdown-content h2 {
-  font-size: 19px;
-  color: #1f2329;
-  margin-top: 28px;
-  margin-bottom: 16px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #ebeef5;
-}
-.markdown-content h3 {
-  font-size: 16px;
-  color: #1f2329;
-  margin-top: 22px;
-  margin-bottom: 10px;
-}
-.markdown-content strong {
-  color: #1f2329;
-  font-weight: 600;
-}
-
-/* 响应式布局 - 小屏转为上下布局 */
-@media (max-width: 768px) {
-  .favorites-container {
-    height: auto;
-  }
-  .main-content {
-    flex-direction: column;
-  }
-  .case-list {
-    width: 100%;
-    max-height: 400px;
-  }
-  .case-detail {
-    flex: 1;
-    min-height: 400px;
-  }
-  .pagination-container .el-pagination {
-    font-size: 10px;
-    flex-wrap: wrap;
-  }
+  display: none; 
 }
 </style>
