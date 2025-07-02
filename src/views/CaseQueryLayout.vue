@@ -15,11 +15,11 @@
           @select="handleMenuSelect"
         >
           <el-menu-item index="1">
-            <i class="iconfont icon-sousuo2" style="font-size: 23px"></i>
+            <i class="iconfont icon-sousuo2" style="font-size: 26px"></i>
             <span v-if="!collapsed" style="margin-left: 15px; font-size: 15px">{{ lang === "zh" ? "搜索案例" : "Search Cases" }}</span>
           </el-menu-item>
           <el-menu-item index="2">
-            <i class="iconfont icon-shoucang_shixin" style="font-size: 23px"></i>
+            <i class="iconfont icon-shoucang_shixin" style="font-size: 25px"></i>
             <span v-if="!collapsed" style="margin-left: 15px; font-size: 15px">{{ lang === "zh" ? "收藏案件" : "Favorites" }}</span>
           </el-menu-item>
           <el-menu-item index="3">
