@@ -8,27 +8,26 @@
         <el-menu
           :default-active="activeMenu"
           class="el-menu-vertical-demo"
-          background-color="#409EFF"
-          text-color="#fff"
-          active-text-color="black"
+          background-color="#F5F7FA"
+          text-color="#909399"
+          active-text-color="#409EFF"
           :collapse="collapsed"
           @select="handleMenuSelect"
         >
           <el-menu-item index="1">
-            <el-icon><Search /></el-icon>
-            <span v-if="!collapsed">{{ lang === "zh" ? "搜索案例" : "Search Cases" }}</span>
+            <i class="iconfont icon-sousuo2" style="font-size: 23px;"></i>
+            <span v-if="!collapsed" style="margin-left: 15px; font-size: 15px;">{{ lang === "zh" ? "搜索案例" : "Search Cases" }}</span>
           </el-menu-item>
           <el-menu-item index="2">
-            <el-icon><Star /></el-icon>
-            <span v-if="!collapsed">{{ lang === "zh" ? "收藏案件" : "Favorites" }}</span>
+            <i class="iconfont icon-shoucang_shixin" style="font-size: 23px;"></i>
+            <span v-if="!collapsed" style="margin-left: 15px; font-size: 15px;">{{ lang === "zh" ? "收藏案件" : "Favorites" }}</span>
           </el-menu-item>
         </el-menu>
       </el-aside>
       <el-container>
         <el-header class="header-bar">
           <div class="header-title">
-            <el-icon style="margin-right: 8px"><Notebook /></el-icon>
-            <span style="font-size: 18px;">{{ lang === "zh" ? "涉外案例查询分析系统" : "Foreign Case Query & Analysis System" }}</span>
+            <span style="font-size: 18px;margin-left: 23px;">{{ lang === "zh" ? "涉外案例查询分析系统" : "Foreign Case Query & Analysis System" }}</span>
           </div>
           <div class="header-actions">
             <el-switch v-model="lang" :active-value="'en'" :inactive-value="'zh'" active-text="EN" inactive-text="中文" style="margin-right: 24px" @change="changeLang" />
@@ -60,23 +59,20 @@
 </template>
 
 <script>
-import { ref, onMounted, computed } from "vue";
-import { useRouter } from "vue-router";
-import { Menu, Star, Notebook, Search } from "@element-plus/icons-vue";
+import { ref, onMounted, computed, watch } from "vue";
+import { useRouter, useRoute } from "vue-router";
+import { Menu} from "@element-plus/icons-vue";
 import { useStore } from 'vuex';
 
 export default {
   components: {
     Menu,
-    Search,
-    Star,
-    Notebook,
   },
   setup() {
     const collapsed = ref(true);
-    //const lang = ref(localStorage.getItem("lang") || "zh");
     const activeMenu = ref("1");
     const router = useRouter();
+    const route = useRoute();
     const userEmail = ref(sessionStorage.getItem("userEmail") || "");
     const store = useStore();
     const lang = computed(() => store.getters.lang);
@@ -99,6 +95,21 @@ export default {
         router.push("/case-query/favorite");
       }
     };
+
+    // 路由与菜单编号的映射
+    const pathToMenu = (path) => {
+      if (path.includes("/case-query/favorite")) return "2";
+      return "1";
+    };
+
+    // 路由变化时同步菜单高亮
+    watch(
+      () => route.path,
+      (newPath) => {
+        activeMenu.value = pathToMenu(newPath);
+      },
+      { immediate: true }
+    );
 
     onMounted(() => {
       lang.value = localStorage.getItem("lang") || "zh";
@@ -131,7 +142,7 @@ export default {
   background: #fff;
 }
 .aside-bar {
-  background: #409EFF;
+  background: #F5F7FA;
   color: #fff;
   position: relative;
   transition: width 0.2s;
@@ -148,7 +159,8 @@ export default {
   justify-content: center;
   height: 56px;
   cursor: pointer;
-  font-size: 18px;
+  color: #409EFF;
+  font-size: 20px;
 }
 .el-menu-vertical-demo {
   border-right: none;

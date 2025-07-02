@@ -26,17 +26,16 @@
           style="padding-top: 12px; width: 100%"
           :autosize="{ minRows: 2, maxRows: 2 }"
           type="textarea"
-          placeholder="请输入您想查询案件的关键字"
+          :placeholder="lang === 'zh' ? '请输入您想查询案件的关键字' : 'Please enter the keywords of the case you want to query'"
         />
       </div>
     </div>
     <div class="case-list-area">
       <el-scrollbar style="width: 100%; height: 480px">
         <div class="case-list-flex">
-          <div v-for="item in pagedCases" :key="item.id" class="case-card-new">
+          <div v-for="(item, index) in pagedCases" :key="item.id" class="case-card-new" @click="selectIndex = (page - 1) * 6 + index">
             <div class="case-card-content">
               <div class="case-card-header">
-                <i class="iconfont icon-xiaofadianwenzhang" style="font-size: 26px; color: #333; margin-right: 10px"></i>
                 <span class="case-title">{{ item.title }}</span>
               </div>
               <div class="case-card-row">
@@ -46,7 +45,7 @@
               </div>
               <div class="case-card-row">
                 <span class="case-tags">标签：{{ item.tags }}</span>
-                <a href="#" class="case-link">查看</a>
+                <a href="#" class="case-link">{{ lang === "zh" ? "查看" : "View" }}</a>
               </div>
             </div>
           </div>
@@ -56,14 +55,15 @@
         <el-pagination size="small" layout="prev, pager, next" :total="cases.length" :page-size="6" v-model:current-page="page" />
       </div>
     </div>
-    <div style="grid-area: case-content-area;">
+
+    <div style="grid-area: case-content-area">
       <!-- 顶部栏 -->
       <div
         style="
           width: 100%;
           border-top-left-radius: 10px;
           border-top-right-radius: 10px;
-          height: 50px;
+          height: 45px;
           position: relative;
           background-color: white;
           border: 1px solid rgb(221.7, 222.6, 224.4);
@@ -71,23 +71,23 @@
           align-items: center;
           font-size: 20px;
           font-weight: bold;
-          display: flex;
-          align-items: center;
+          padding: 0 24px;
         "
       >
-      <span style="font-weight: 600; font-size: 18px; color: #333; margin-left: 30px;">案件：{{ cases[selectIndex].title }}</span>
-      <span style="font-weight: 600; font-size: 18px; color: #409EFF; margin-left: 100px;">智能案件分析</span>
-      <span
-        style="font-weight: 600; font-size: 18px; color: #909399; margin-left: 100px; cursor: pointer;"
-        @click="openOriginUrl"
-      >
-        查看原始判决文书
-      </span>
-      <i
-        class="iconfont icon-xiazai"
-        style="font-size: 16px; margin-left: 60px; color: rgb(121.3, 187.1, 255); position: absolute; right: 40px; cursor: pointer;"
-        @click="downloadWord"
-      ></i>
+        <span style="font-weight: 600; font-size: 16px; color: #409eff;">
+          {{ lang === "zh" ? "智能案件分析 :" : "Case Analysis :" }}
+        </span>
+        <span style="font-weight: 600; font-size: 16px; color: #333; margin-left: 10px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+          {{ cases[selectIndex].title }}
+        </span>
+        <span style="font-weight: 600; font-size: 16px; color: #909399; cursor: pointer; margin-left: 24px;" @click="openOriginUrl">
+          {{ lang === "zh" ? "查看原始判决文书" : "View Original Judgment" }}
+        </span>
+        <i
+          class="iconfont icon-xiazai"
+          style="font-size: 16px; margin-left: 16px; color: rgb(121.3, 187.1, 255); cursor: pointer;"
+          @click="downloadWord"
+        ></i>
       </div>
       <!-- 内容区 -->
       <div
@@ -95,16 +95,16 @@
           width: 100%;
           border: 1px solid rgb(221.7, 222.6, 224.4);
           border-top: none;
-          height: 545px;
+          height: 555px;
           background-color: white;
           border-bottom-right-radius: 10px;
           border-bottom-left-radius: 10px;
-          padding: 24px 32px 0 32px;
+          padding: 0px 32px 0 32px;
           box-sizing: border-box;
           overflow-y: auto;
         "
       >
-        <div v-html="caseDetailHtml" style="font-size:small;"></div>
+        <div v-html="caseDetailHtml"></div>
       </div>
     </div>
   </div>
@@ -112,6 +112,7 @@
 
 <script>
 import { ref, computed } from "vue";
+import { useStore } from "vuex";
 import MarkdownIt from "markdown-it";
 import HtmlDocx from "html-docx-js/dist/html-docx";
 import { saveAs } from "file-saver";
@@ -119,6 +120,9 @@ import { saveAs } from "file-saver";
 export default {
   name: "SearchCases",
   setup() {
+    const store = useStore();
+    const lang = computed(() => store.getters.lang);
+
     const textarea = ref("");
     const page = ref(1);
     const selectIndex = ref(0);
@@ -130,6 +134,7 @@ export default {
         court: "沃兹吉边德法院",
         date: "2025.1.1",
         tags: "财务纠纷、故意伤人",
+        favorite: false,
       },
       {
         id: 2,
@@ -138,6 +143,7 @@ export default {
         court: "北京市中级法院",
         date: "2024.12.1",
         tags: "合同纠纷",
+        favorite: false,
       },
       {
         id: 3,
@@ -146,6 +152,7 @@ export default {
         court: "伦敦高等法院",
         date: "2024.11.1",
         tags: "侵权",
+        favorite: false,
       },
       {
         id: 4,
@@ -154,6 +161,7 @@ export default {
         court: "巴黎地方法院",
         date: "2024.10.1",
         tags: "知识产权",
+        favorite: false,
       },
       {
         id: 5,
@@ -162,6 +170,7 @@ export default {
         court: "柏林法院",
         date: "2024.9.1",
         tags: "劳动争议",
+        favorite: false,
       },
       {
         id: 6,
@@ -170,6 +179,7 @@ export default {
         court: "东京地方法院",
         date: "2024.8.1",
         tags: "交通事故",
+        favorite: false,
       },
       {
         id: 7,
@@ -178,15 +188,15 @@ export default {
         court: "首尔法院",
         date: "2024.7.1",
         tags: "医疗纠纷",
+        favorite: false,
       },
     ]);
     const pagedCases = computed(() => {
       const start = (page.value - 1) * 6;
       return cases.value.slice(start, start + 6);
     });
-    const caseOriginUrl = ref('https://www.courtlistener.com/opinion/4328762/mike-macmann-v-mike-matthes/?q=mike');
-    const caseDetailMarkdown = ref(`
-### 法律案件解释：多诺霍诉史蒂文森案 (Donoghue v Stevenson)
+    const caseOriginUrl = ref("https://www.courtlistener.com/opinion/4328762/mike-macmann-v-mike-matthes/?q=mike");
+    const caseDetailMarkdown = ref(`### 法律案件解释：多诺霍诉史蒂文森案 (Donoghue v Stevenson)
 
 这是一份案例解释——一个在普通法系国家（如英国、加拿大、澳大利亚等）具有里程碑意义的法律案件：多诺霍诉史蒂文森案（Donoghue v Stevenson [1932] AC 562），又被称为“蜗牛案”。这个案件确立了现代侵权法中最重要的原则之一——**疏忽侵权 (Negligence)** 的原则。
 
@@ -210,9 +220,7 @@ export default {
     `);
 
     const md = new MarkdownIt();
-    const caseDetailHtml = computed(() => md.render(caseDetailMarkdown.value));
-
-    // 下载为 Word
+    const caseDetailHtml = computed(() => md.render(caseDetailMarkdown.value)); // 下载为 Word
     const downloadWord = () => {
       const html = `
         <html>
@@ -223,7 +231,7 @@ export default {
         </html>
       `;
       const blob = HtmlDocx.asBlob(html);
-      saveAs(blob, `${cases.value[selectIndex.value].title || '案件详情'}.docx`);
+      saveAs(blob, `${cases.value[selectIndex.value].title || "案件详情"}.docx`);
     };
 
     const openOriginUrl = () => {
@@ -241,6 +249,7 @@ export default {
       caseDetailMarkdown,
       caseOriginUrl,
       openOriginUrl,
+      lang,
     };
   },
 };
@@ -252,7 +261,7 @@ export default {
   width: 100%;
   height: 100%;
   display: grid;
-  grid-template-columns: 1fr 10fr 1fr 24fr 1fr;
+  grid-template-columns: 1fr 8fr 1fr 22fr 1fr; /* 这里调整比例 */
   grid-template-rows: 20fr 100fr;
   grid-template-areas:
     "blank1 input-area blank2 case-content-area blank3"
@@ -288,7 +297,7 @@ export default {
   cursor: pointer;
   transition: box-shadow 0.2s;
   width: 100%;
-  min-width: 460px;
+  min-width: 220px;
   max-width: 100%;
   height: 100px;
   margin-bottom: -2px;
@@ -306,7 +315,7 @@ export default {
   margin-bottom: 6px;
 }
 .case-title {
-  font-weight: middle;
+  font-weight: 600;
   font-size: 16px;
   color: #222;
 }
@@ -349,5 +358,6 @@ export default {
 }
 .case-link:hover {
   text-decoration: underline;
+  color: rgb(121.3, 187.1, 255);
 }
 </style>

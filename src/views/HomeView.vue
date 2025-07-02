@@ -28,7 +28,7 @@
     </div>
     
     <!-- 搜索区域 -->
-    <div class="search-area" style="background-color: transparent; padding: 10px 0;">
+    <div class="search-area" style="background-color: transparent; padding: 70px 0;">
       <div style="border-radius: 15px; border: 1px solid #ddd; padding: 20px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);">
         <!-- 筛选条件 -->
         <div class="filter-container" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
