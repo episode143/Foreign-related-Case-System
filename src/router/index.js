@@ -30,6 +30,11 @@ const routes = [
         path:'/case-query/favorite',
         name: 'favorite-case',
         component: () => import('../views/FavoriteCases.vue'),
+      },
+      {
+        path:'/case-query/history',
+        name: 'history-case',
+        component: () => import('../views/HistoryCases.vue'),
       }
     ]
   }

@@ -8,7 +8,7 @@
             right: 6px;
             bottom: 5px;
             z-index: 10;
-            background-color: rgb(121.3, 187.1, 255);
+            background-color: #409EFF;
             border: none;
             border-radius: 50%;
             width: 30px;
@@ -37,6 +37,17 @@
             <div class="case-card-content">
               <div class="case-card-header">
                 <span class="case-title">{{ item.title }}</span>
+                <i
+                  class="iconfont icon-shoucang_shixin"
+                  :style="{
+                    marginLeft: 'auto',
+                    fontSize: '20px',
+                    color: item.favorite ? '#409EFF' : 'rgb(199.5, 201, 204)',
+                    cursor: 'pointer'
+                  }"
+                  @click.stop="item.favorite = !item.favorite"
+                  title="收藏"
+                ></i>
               </div>
               <div class="case-card-row">
                 <span class="case-country">{{ item.country }}</span>
@@ -56,15 +67,13 @@
       </div>
     </div>
 
-    <div style="grid-area: case-content-area">
+    <div style="grid-area: case-content-area;background-color: transparent;">
       <!-- 顶部栏 -->
       <div
         style="
-          width: 100%;
           border-top-left-radius: 10px;
           border-top-right-radius: 10px;
           height: 45px;
-          position: relative;
           background-color: white;
           border: 1px solid rgb(221.7, 222.6, 224.4);
           display: flex;
@@ -80,7 +89,10 @@
         <span style="font-weight: 600; font-size: 16px; color: #333; margin-left: 10px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
           {{ cases[selectIndex].title }}
         </span>
-        <span style="font-weight: 600; font-size: 16px; color: #909399; cursor: pointer; margin-left: 24px;" @click="openOriginUrl">
+        <span
+          style="font-weight: 600; font-size: 16px; color: #909399; cursor: pointer; margin-left: 24px;"
+          @click="openOriginUrl"
+        >
           {{ lang === "zh" ? "查看原始判决文书" : "View Original Judgment" }}
         </span>
         <i
@@ -104,7 +116,7 @@
           overflow-y: auto;
         "
       >
-        <div v-html="caseDetailHtml"></div>
+        <div v-html="caseDetailHtml" class="case-detail-content"></div>
       </div>
     </div>
   </div>
@@ -352,12 +364,17 @@ export default {
   float: right;
   color: rgb(115.2, 117.6, 122.4);
   font-size: 14px;
-  font-weight: bold;
+  font-weight: 500;
   margin-left: auto;
   text-decoration: none;
 }
 .case-link:hover {
   text-decoration: underline;
   color: rgb(121.3, 187.1, 255);
+}
+.case-detail-content {
+  font-size: 15px; /* 你想要的大小 */
+  color: #222;
+  line-height: 1.8;
 }
 </style>

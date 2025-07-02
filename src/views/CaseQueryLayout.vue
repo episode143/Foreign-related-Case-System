@@ -15,19 +15,23 @@
           @select="handleMenuSelect"
         >
           <el-menu-item index="1">
-            <i class="iconfont icon-sousuo2" style="font-size: 23px;"></i>
-            <span v-if="!collapsed" style="margin-left: 15px; font-size: 15px;">{{ lang === "zh" ? "搜索案例" : "Search Cases" }}</span>
+            <i class="iconfont icon-sousuo2" style="font-size: 23px"></i>
+            <span v-if="!collapsed" style="margin-left: 15px; font-size: 15px">{{ lang === "zh" ? "搜索案例" : "Search Cases" }}</span>
           </el-menu-item>
           <el-menu-item index="2">
-            <i class="iconfont icon-shoucang_shixin" style="font-size: 23px;"></i>
-            <span v-if="!collapsed" style="margin-left: 15px; font-size: 15px;">{{ lang === "zh" ? "收藏案件" : "Favorites" }}</span>
+            <i class="iconfont icon-shoucang_shixin" style="font-size: 23px"></i>
+            <span v-if="!collapsed" style="margin-left: 15px; font-size: 15px">{{ lang === "zh" ? "收藏案件" : "Favorites" }}</span>
+          </el-menu-item>
+          <el-menu-item index="3">
+            <i class="iconfont icon-lishixiao1" style="font-size: 20px;margin-left: 1px;"></i>
+            <span v-if="!collapsed" style="margin-left: 15px; font-size: 15px">{{ lang === "zh" ? "历史记录" : "History" }}</span>
           </el-menu-item>
         </el-menu>
       </el-aside>
       <el-container>
         <el-header class="header-bar">
           <div class="header-title">
-            <span style="font-size: 18px;margin-left: 23px;">{{ lang === "zh" ? "涉外案例查询分析系统" : "Foreign Case Query & Analysis System" }}</span>
+            <span style="font-size: 18px; margin-left: 23px">{{ lang === "zh" ? "涉外案例查询分析系统" : "Foreign Case Query & Analysis System" }}</span>
           </div>
           <div class="header-actions">
             <el-switch v-model="lang" :active-value="'en'" :inactive-value="'zh'" active-text="EN" inactive-text="中文" style="margin-right: 24px" @change="changeLang" />
@@ -61,8 +65,8 @@
 <script>
 import { ref, onMounted, computed, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import { Menu} from "@element-plus/icons-vue";
-import { useStore } from 'vuex';
+import { Menu } from "@element-plus/icons-vue";
+import { useStore } from "vuex";
 
 export default {
   components: {
@@ -78,7 +82,7 @@ export default {
     const lang = computed(() => store.getters.lang);
     const changeLang = (val) => {
       //localStorage.setItem("lang", val);
-      store.commit('setLang', val);
+      store.commit("setLang", val);
     };
 
     const logout = () => {
@@ -93,12 +97,15 @@ export default {
         router.push("/case-query/home");
       } else if (index === "2") {
         router.push("/case-query/favorite");
+      } else if (index === "3") {
+        router.push("/case-query/history");
       }
     };
 
     // 路由与菜单编号的映射
     const pathToMenu = (path) => {
       if (path.includes("/case-query/favorite")) return "2";
+      if (path.includes("/case-query/history")) return "3";
       return "1";
     };
 
@@ -142,7 +149,7 @@ export default {
   background: #fff;
 }
 .aside-bar {
-  background: #F5F7FA;
+  background: #f5f7fa;
   color: #fff;
   position: relative;
   transition: width 0.2s;
@@ -159,7 +166,7 @@ export default {
   justify-content: center;
   height: 56px;
   cursor: pointer;
-  color: #409EFF;
+  color: #409eff;
   font-size: 20px;
 }
 .el-menu-vertical-demo {
