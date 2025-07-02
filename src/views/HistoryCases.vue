@@ -10,22 +10,22 @@
     <!-- 右侧折叠过滤器 -->
     <div :class="['right-panel', { collapsed: isCollapsed }]" :style="isCollapsed ? { pointerEvents: 'none' } : {}">
       <div v-show="!isCollapsed" class="panel-content">
-        <h3 style="margin-bottom:18px;">筛选</h3>
+        <h3 style="margin-bottom:18px;">{{ lang === 'zh' ? '筛选' : 'Filter' }}</h3>
         <div class="filter-group">
-          <div class="filter-label">国家</div>
+          <div class="filter-label">{{ lang === 'zh' ? '国家' : 'Country' }}</div>
           <select v-model="filterCountry" class="filter-select">
-            <option value="">全部</option>
+            <option value="">{{ lang === 'zh' ? '全部' : 'All' }}</option>
             <option v-for="item in countryOptions" :key="item.value" :value="item.value">
-              {{ item.label }}
+              {{ lang === 'zh' ? item.label : item.enLabel }}
             </option>
           </select>
         </div>
         <div class="filter-group">
-          <div class="filter-label">案件类型</div>
+          <div class="filter-label">{{ lang === 'zh' ? '案件类型' : 'Case Type' }}</div>
           <select v-model="filterType" class="filter-select">
-            <option value="">全部</option>
+            <option value="">{{ lang === 'zh' ? '全部' : 'All' }}</option>
             <option v-for="item in typeOptions" :key="item.value" :value="item.value">
-              {{ item.label }}
+              {{ lang === 'zh' ? item.label : item.enLabel }}
             </option>
           </select>
         </div>
@@ -47,13 +47,26 @@
               <span class="case-title">{{ item.title }}</span>
             </div>
             <div class="case-card-row">
-              <span class="case-country">{{ item.countryLabel }}</span>
+              <span class="case-country">
+                {{
+                  (countryOptions.find(opt => opt.value === item.country) || {})[
+                    lang === 'zh' ? 'label' : 'enLabel'
+                  ]
+                }}
+              </span>
               <span class="case-court">{{ item.court }}</span>
               <span class="case-date">{{ item.date }}</span>
             </div>
             <div class="case-card-row">
-              <span class="case-tags">{{ lang === "zh" ? "类型" : "Tags" }}：{{ item.typeLabel }}</span>
-              <span class="case-link" @click="showCase(item)">{{ lang === 'zh' ? '查看':'View' }}</span>
+              <span class="case-tags">
+                {{ lang === "zh" ? "类型" : "Tags" }}：
+                {{
+                  lang === 'zh'
+                    ? (typeOptions.find(opt => opt.value === item.type)?.label || item.typeLabel)
+                    : (typeOptions.find(opt => opt.value === item.type)?.enLabel || item.typeLabel)
+                }}
+              </span>
+              <span class="case-link" @click="showCase(item)">{{ lang === "zh" ? "查看":"View" }}</span>
             </div>
           </div>
         </div>
@@ -89,39 +102,43 @@
 
 <script>
 import { ref, computed } from "vue";
+import { useStore } from "vuex";
 import MarkdownIt from "markdown-it";
 
 export default {
   name: "HistoryCases",
   setup() {
+    const store = useStore();
+    const lang = computed(() => store.getters.lang);
+
     // 选项
     const countryOptions = [
-      { value: "china", label: "中国" },
-      { value: "usa", label: "美国" },
-      { value: "uk", label: "英国" },
-      { value: "france", label: "法国" },
-      { value: "japan", label: "日本" },
-      { value: "korea", label: "韩国" },
-      { value: "russia", label: "俄罗斯" },
-      { value: "germany", label: "德国" },
+      { value: "china", label: "中国", enLabel: "China" },
+      { value: "usa", label: "美国", enLabel: "USA" },
+      { value: "uk", label: "英国", enLabel: "UK" },
+      { value: "france", label: "法国", enLabel: "France" },
+      { value: "japan", label: "日本", enLabel: "Japan" },
+      { value: "korea", label: "韩国", enLabel: "Korea" },
+      { value: "russia", label: "俄罗斯", enLabel: "Russia" },
+      { value: "germany", label: "德国", enLabel: "Germany" },
     ];
     const typeOptions = [
-      { value: "theft", label: "盗窃" },
-      { value: "fraud", label: "诈骗" },
-      { value: "intentional_injury", label: "故意伤害" },
-      { value: "traffic_accident", label: "交通肇事" },
-      { value: "contract_dispute", label: "合同纠纷" },
-      { value: "labor_dispute", label: "劳动争议" },
-      { value: "divorce", label: "离婚案" },
-      { value: "property_damage", label: "财产损害赔偿纠纷" },
-      { value: "house_sale", label: "房屋买卖合同纠纷" },
-      { value: "tort_liability", label: "侵权责任纠纷" },
-      { value: "medical_accident", label: "医疗事故纠纷" },
-      { value: "ip_dispute", label: "知识产权纠纷" },
-      { value: "admin_penalty", label: "行政处罚纠纷" },
-      { value: "land_expropriation", label: "土地征收补偿争议" },
-      { value: "admin_license", label: "行政许可争议" },
-      { value: "other", label: "其它类型" },
+      { value: "theft", label: "盗窃", enLabel: "Theft" },
+      { value: "fraud", label: "诈骗", enLabel: "Fraud" },
+      { value: "intentional_injury", label: "故意伤害", enLabel: "Intentional Injury" },
+      { value: "traffic_accident", label: "交通肇事", enLabel: "Traffic Accident" },
+      { value: "contract_dispute", label: "合同纠纷", enLabel: "Contract Dispute" },
+      { value: "labor_dispute", label: "劳动争议", enLabel: "Labor Dispute" },
+      { value: "divorce", label: "离婚案", enLabel: "Divorce" },
+      { value: "property_damage", label: "财产损害赔偿纠纷", enLabel: "Property Damage" },
+      { value: "house_sale", label: "房屋买卖合同纠纷", enLabel: "House Sale Dispute" },
+      { value: "tort_liability", label: "侵权责任纠纷", enLabel: "Tort Liability" },
+      { value: "medical_accident", label: "医疗事故纠纷", enLabel: "Medical Accident" },
+      { value: "ip_dispute", label: "知识产权纠纷", enLabel: "IP Dispute" },
+      { value: "admin_penalty", label: "行政处罚纠纷", enLabel: "Admin Penalty" },
+      { value: "land_expropriation", label: "土地征收补偿争议", enLabel: "Land Expropriation" },
+      { value: "admin_license", label: "行政许可争议", enLabel: "Admin License" },
+      { value: "other", label: "其它类型", enLabel: "Other" },
     ];
 
     // 示例数据
@@ -132,11 +149,9 @@ export default {
         id: i + 1,
         title: `案例${i + 1}`,
         country: countryOptions[countryIdx].value,
-        countryLabel: countryOptions[countryIdx].label,
         court: ["北京市中级法院", "纽约地方法院", "伦敦高等法院", "巴黎地方法院", "柏林法院"][i % 5],
         date: `2024.${(i % 12) + 1}.${(i % 28) + 1}`,
         type: typeOptions[typeIdx].value,
-        typeLabel: typeOptions[typeIdx].label,
       };
     }));
 
@@ -185,6 +200,7 @@ export default {
     }
 
     return {
+      lang,
       isCollapsed,
       filterCountry,
       filterType,
