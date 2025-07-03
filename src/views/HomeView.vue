@@ -231,6 +231,12 @@ export default {
       router.push("/case-query/search");
     };
 
+    // 跳转到案件详情页
+    const goToCaseDetail = (caseId) => {
+      console.log("跳转到案件详情页:", caseId);
+      router.push("/case-query/favorite");
+    };
+
     return {
       searchText,
       filter,
@@ -242,6 +248,7 @@ export default {
       countryOptions,
       timeOptions,
       caseTypeOptions,
+      goToCaseDetail,
     };
   },
 };

@@ -4,7 +4,7 @@
       <!-- 案例列表区域 - 增加收缩功能 -->
       <div class="case-list" :class="{ 'collapsed': isCollapsed }">
         <div class="case-list-header">
-          <span>{{ caseListText }}</span>
+          <span>{{ lang === 'zh' ? '案例列表' : 'Case List' }}</span>
           <div class="toggle-btn" @click="toggleCollapse">
             <el-icon v-if="isCollapsed" class="expand-icon">
               <ArrowRightBold />
@@ -33,8 +33,8 @@
                   <span class="case-date">{{ item.date }}</span>
                 </div>
                 <div class="case-card-row">
-                  <span class="case-tags">{{ tagText }}：{{ item.tags }}</span>
-                  <a href="#" class="case-link" @click.prevent="viewCase(item.id)">{{ viewText }}</a>
+                  <span class="case-tags">{{ lang  === 'zh' ? '标签' : 'tag' }}：{{ item.tags }}</span>
+                  <a href="#" class="case-link" @click.prevent="viewCase(item.id)">{{ lang  === 'zh' ? '查看' : 'view' }}</a>
                 </div>
               </div>
             </div>
@@ -58,7 +58,7 @@
         <div class="case-detail-header">
           <span class="case-title-large">{{ cases[selectIndex].title || '请选择案件' }}</span>
           <div class="header-actions">
-            <span class="action-item" @click="openOriginUrl">{{ viewOriginalJudgmentText }}</span>
+            <span class="action-item" @click="openOriginUrl">{{ lang  === 'zh' ? '查看原始判决文书' : 'View Original Judgment' }}</span>
             <i class="iconfont icon-xiazai download-icon" @click="downloadWord"></i>
           </div>
         </div>
@@ -93,79 +93,14 @@ export default {
     const isCollapsed = ref(false); // 列表收缩状态
     const lang = computed(() => store.getters.lang);
 
-    const caseListText = computed(() => {
-      return lang.value === 'zh' ? '案例列表' : 'Case List';
-    });
-
-    const tagText = computed(() => {
-      return lang.value === 'zh' ? '标签' : 'tag';
-    });
-
-    const viewText = computed(() => {
-      return lang.value === 'zh' ? '查看' : 'view';
-    });
-
-    const viewOriginalJudgmentText = computed(() => {
-      return lang.value === 'zh' ? '查看原始判决文书' : 'View Original Judgment';
-    });
-
     const cases = ref([
-      {
-        id: 1,
-        title: "多诺霍诉史蒂文森案",
-        country: "美国",
-        court: "沃兹吉边德法院",
-        date: "2025.1.1",
-        tags: "财务纠纷、故意伤人",
-      },
-      {
-        id: 2,
-        title: "张华诉星辰公寓案",
-        country: "中国",
-        court: "北京市中级法院",
-        date: "2024.12.1",
-        tags: "合同纠纷",
-      },
-      {
-        id: 3,
-        title: "丽诉味来食品公司案",
-        country: "英国",
-        court: "伦敦高等法院",
-        date: "2024.11.1",
-        tags: "侵权",
-      },
-      {
-        id: 4,
-        title: "彼得森诉数智互联案",
-        country: "法国",
-        court: "巴黎地方法院",
-        date: "2024.10.1",
-        tags: "知识产权",
-      },
-      {
-        id: 5,
-        title: "劳埃德劳动纠纷案",
-        country: "德国",
-        court: "柏林法院",
-        date: "2024.9.1",
-        tags: "劳动争议",
-      },
-      {
-        id: 6,
-        title: "东京地铁连环事故案",
-        country: "日本",
-        court: "东京地方法院",
-        date: "2024.8.1",
-        tags: "交通事故",
-      },
-      {
-        id: 7,
-        title: "案例7",
-        country: "韩国",
-        court: "首尔法院",
-        date: "2024.7.1",
-        tags: "医疗纠纷",
-      },
+      { id: 1, title: "多诺霍诉史蒂文森案", country: "美国", court: "沃兹吉边德法院", date: "2025.1.1", tags: "财务纠纷、故意伤人" },
+      { id: 2, title: "张华诉星辰公寓案", country: "中国", court: "北京市中级法院", date: "2024.12.1", tags: "合同纠纷" },
+      { id: 3, title: "丽诉味来食品公司案", country: "英国", court: "伦敦高等法院", date: "2024.11.1", tags: "侵权" },
+      { id: 4, title: "彼得森诉数智互联案", country: "法国", court: "巴黎地方法院", date: "2024.10.1", tags: "知识产权" },
+      { id: 5, title: "劳埃德劳动纠纷案", country: "德国", court: "柏林法院", date: "2024.9.1", tags: "劳动争议" },
+      { id: 6, title: "东京地铁连环事故案", country: "日本", court: "东京地方法院", date: "2024.8.1", tags: "交通事故" },
+      { id: 7, title: "案例7", country: "韩国", court: "首尔法院", date: "2024.7.1", tags: "医疗纠纷" },
     ]);
     
     // 计算当前页的案件列表
@@ -258,6 +193,7 @@ export default {
 
     return {
       page,
+      lang,
       pageSize,
       cases,
       pagedCases,
@@ -272,27 +208,22 @@ export default {
       handleCurrentChange,
       isCollapsed,
       toggleCollapse,
-      caseListText,
-      tagText,
-      viewText,
-      viewOriginalJudgmentText,
     };
   },
 };
 </script>
 
 <style scoped>
-/* 基础布局 - 单页整合 */
+/* 基础布局优化 */
 .favorites-container {
   position: relative;
   width: 100%;
   height: 90vh;
   display: flex;
-  flex-direction: column;
   overflow: hidden;
   background-color: #f5f7fa;
 }
-/* 主要内容区 */
+
 .main-content {
   display: flex;
   flex: 1;
@@ -300,18 +231,16 @@ export default {
   border-bottom: 3px;
   position: relative;
 }
-/* 案件列表区域 */
+
+/* 案件列表区域样式 */
 .case-list {
   width: 300px;
-  background-color: white;
-  box-shadow: 0 0 12px rgba(0,0,0,0.08);
-  overflow: hidden;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  transition: width 0.3s ease, box-shadow 0.3s ease;
-  z-index: 10;
+  background: white;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  transition: all 0.3s;
+  flex-shrink: 0;
 }
+
 .case-list.collapsed {
   width: 60px;
   box-shadow: 0 0 8px rgba(0,0,0,0.08);
@@ -322,113 +251,105 @@ export default {
   display: none;
 }
 
-/* 案件列表头部 */
 .case-list-header {
-  background-color: #f0f5ff;
-  padding: 16px 24px;
-  font-size: 16px;
-  font-weight: 500;
+  font-size: 20px;
+  font-weight: bold;
   color: #409EFF;
-  border-bottom: 1px solid #e6f0ff;
+  letter-spacing: 2px;
+  user-select: none;
+  
+  padding: 12px 24px;
+  border-bottom: 1px solid #e0e6f7;
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
 }
 
-/* 案件列表内容区 */
-.case-list-content {
-  flex: 1;
-  padding: 16px;
-  box-sizing: border-box;
-  overflow-y: auto;
+
+.toggle-btn {
+  cursor: pointer;
+  transition: all 0.2s;
 }
-.case-list-content::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Edge */
+
+.toggle-btn:hover {
+  transform: scale(1.1);
 }
 
 /* 案件卡片样式 */
-.case-list-flex {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+.case-list-content {
+  padding: 12px;
 }
+
 .case-card-new {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-  transition: all 0.3s ease;
+  background: #f2f6fc;
+  border-radius: 14px;
+  margin-bottom: 12px;
+  transition: all 0.2s;
   cursor: pointer;
 }
+
 .case-card-new:hover {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  box-shadow: 0 4px 12px rgba(64,158,255,0.15);
   transform: translateY(-2px);
 }
+
 .case-card-content {
   padding: 16px;
 }
+
 .case-card-header {
   display: flex;
   align-items: center;
-  margin-bottom: 10px;
+  gap: 8px;
+  margin-bottom: 12px;
 }
+
 .case-title {
-  font-weight: 600;
   font-size: 16px;
-  color: #1f2329;
+  color: #222;
+  font-weight: 600;
   flex: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
 .favorite-icon {
-  display: flex;
+  padding: 4px;
   border-radius: 50%;
   transition: background-color 0.2s;
 }
+
 .favorite-icon:hover {
   background-color: #f0f5ff;
 }
+
 .star-icon {
-  font-size: 28px;
-  color: #FFD700;
+  color: #ffb800;
+  font-size: 24px;
 }
+
 .case-card-row {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+  color: #667085;
   margin-bottom: 8px;
-  font-size: 13px;
-  color: #606266;
 }
-.case-country {
-  font-weight: 500;
-  color: #303133;
-}
-.case-court {
-  flex: 1;
-  margin-left: 10px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.case-date {
-  color: #909399;
-}
+
 .case-tags {
   flex: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
 .case-link {
-  color: #409EFF;
+  color: #409eff;
   text-decoration: none;
-  font-weight: 500;
-  transition: color 0.2s;
+  white-space: nowrap;
 }
-.case-link:hover {
-  color: #66b1ff;
-}
+
 /* 分页控件样式 */
 .pagination-container {
   padding: 8px;
@@ -443,77 +364,78 @@ export default {
   font-size: 12px;
 }
 
-/* 分隔线 */
+/* 分隔线样式 */
 .divider {
-  width: 6px;
+  width: 3px;
   background-color: #f0f5ff;
   transition: width 0.3s ease;
   position: relative;
 }
-.divider.collapsed {
-  width: 6px;
-}
+
 .divider.collapsed::before {
   display: none;
 }
 
-/* 案件详情区域 */
+/* 案件详情区域样式 */
 .case-detail {
   flex: 1;
+  background: white;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
   display: flex;
   flex-direction: column;
-  background-color: white;
   overflow: hidden;
-  transition: flex 0.3s ease;
-}
-.case-detail.expanded {
-  flex: 1;
 }
 
 .case-detail-header {
-  border-bottom: 1px solid #ebeef5;
-  border-top: 1px solid #ebeef5;
+  padding: 13.5px 24px;
+  border-bottom: 1px solid #e0e6f7;
   display: flex;
   align-items: center;
-  padding: 0 24px;
-  height: 55px;
+  gap: 16px;
 }
+
 .case-title-large {
-  font-weight: 600;
   font-size: 18px;
-  color: #1f2329;
+  font-weight: 600;
+  color: #222;
   flex: 1;
 }
+
 .header-actions {
   display: flex;
   align-items: center;
   gap: 24px;
 }
+
 .action-item {
-  font-weight: 500;
+  color: #409eff;
+  cursor: pointer;
   font-size: 14px;
-  color: #909399;
-  cursor: pointer;
-  transition: color 0.2s;
-}
-.action-item:hover {
-  color: #409EFF;
-}
-.download-icon {
-  font-size: 18px;
-  color: #409EFF;
-  cursor: pointer;
+  transition: all 0.2s;
 }
 
-/* 内容区样式 */
+.action-item:hover {
+  color: #66b1ff;
+}
+
+.download-icon {
+  color: #409eff;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.download-icon:hover {
+  transform: scale(1.1);
+}
+
 .case-detail-content {
   flex: 1;
-  padding: 24px 32px;
-  box-sizing: border-box;
-  border-right: 3px solid #ebeef5;
+  padding: 24px;
   overflow-y: auto;
-}
-.case-detail-content::-webkit-scrollbar {
-  display: none; 
+  margin-bottom: 50px;
+  font-size: 15px;
+  line-height: 1.8;
+  color: #222;
 }
 </style>
