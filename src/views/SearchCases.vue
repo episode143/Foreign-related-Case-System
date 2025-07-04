@@ -18,24 +18,6 @@
             </option>
           </select>
         </div>
-        <div class="filter-group">
-          <!-- 案件类型 -->
-          <div class="filter-label">{{ lang === 'zh' ? '案件类型' : 'Case Type' }}</div>
-          <el-select
-            v-model="filterTypes"
-            multiple
-            collapse-tags
-            :placeholder="lang === 'zh' ? '请选择案件类型' : 'Select case type'"
-            style="width: 100%;"
-          >
-            <el-option
-              v-for="item in typeOptions"
-              :key="item.value"
-              :label="lang === 'zh' ? item.label : item.enLabel"
-              :value="item.value"
-            />
-          </el-select>
-        </div>
         <!-- 判决时间 -->
         <div class="filter-group">
           <div class="filter-label">{{ lang === 'zh' ? '判决时间' : 'Judgment Time' }}</div>

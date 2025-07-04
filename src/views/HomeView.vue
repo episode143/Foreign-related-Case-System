@@ -51,24 +51,7 @@
               >{{ lang === 'zh' ? item.label_zh : item.label_en }}</el-radio-button>
             </el-radio-group>
           </div>
-          <div class="filter-group">
-            <span class="filter-label">{{ lang === 'zh' ? '案件类型：' : 'Case Type:' }}</span>
-            <el-select
-              v-model="filter.caseType"
-              multiple
-              collapse-tags
-              :placeholder="lang === 'zh' ? '全部' : 'All'"
-              size="small"
-              style="min-width: 320px"
-            >
-              <el-option
-                v-for="item in caseTypeOptions"
-                :key="item.value"
-                :label="lang === 'zh' ? item.label_zh : item.label_en"
-                :value="item.value"
-              />
-            </el-select>
-          </div>
+          <!-- 案件类型筛选已删除 -->
         </div>
         <!-- 输入框区 -->
         <div class="input-box-outer">
@@ -98,7 +81,7 @@ export default {
     const filter = ref({
       country: "",
       time: "",
-      caseType: [],
+      // caseType: [], // 删除案件类型字段
     });
     const lang = computed(() => store.getters.lang);
 
@@ -107,11 +90,8 @@ export default {
       { value: "", label_zh: "全部", label_en: "All" },
       { value: "china", label_zh: "中国", label_en: "China" },
       { value: "usa", label_zh: "美国", label_en: "USA" },
-      { value: "uk", label_zh: "英国", label_en: "UK" },
-      { value: "france", label_zh: "法国", label_en: "France" },
       { value: "japan", label_zh: "日本", label_en: "Japan" },
       { value: "korea", label_zh: "韩国", label_en: "Korea" },
-      { value: "russia", label_zh: "俄罗斯", label_en: "Russia" },
     ];
     const timeOptions = [
       { value: "", label_zh: "全部", label_en: "All" },
@@ -120,24 +100,7 @@ export default {
       { value: "5", label_zh: "最近五年", label_en: "Last 5 Years" },
       { value: "10", label_zh: "最近十年", label_en: "Last 10 Years" },
     ];
-    const caseTypeOptions = [
-      { value: "theft", label_zh: "盗窃", label_en: "Theft" },
-      { value: "fraud", label_zh: "诈骗", label_en: "Fraud" },
-      { value: "intentional_injury", label_zh: "故意伤害", label_en: "Intentional Injury" },
-      { value: "traffic_accident", label_zh: "交通肇事", label_en: "Traffic Accident" },
-      { value: "contract_dispute", label_zh: "合同纠纷", label_en: "Contract Dispute" },
-      { value: "labor_dispute", label_zh: "劳动争议", label_en: "Labor Dispute" },
-      { value: "divorce", label_zh: "离婚案", label_en: "Divorce" },
-      { value: "property_damage", label_zh: "财产损害赔偿纠纷", label_en: "Property Damage Compensation Dispute" },
-      { value: "house_sale", label_zh: "房屋买卖合同纠纷", label_en: "House Sale Contract Dispute" },
-      { value: "tort_liability", label_zh: "侵权责任纠纷", label_en: "Tort Liability Dispute" },
-      { value: "medical_accident", label_zh: "医疗事故纠纷", label_en: "Medical Accident Dispute" },
-      { value: "ip_dispute", label_zh: "知识产权纠纷", label_en: "Intellectual Property Dispute" },
-      { value: "admin_penalty", label_zh: "行政处罚纠纷", label_en: "Administrative Penalty Dispute" },
-      { value: "land_expropriation", label_zh: "土地征收补偿争议", label_en: "Land Expropriation Compensation Dispute" },
-      { value: "admin_license", label_zh: "行政许可争议", label_en: "Administrative License Dispute" },
-      { value: "other", label_zh: "其它类型", label_en: "Other Types" },
-    ];
+    // const caseTypeOptions = [...] // 删除案件类型选项
 
     const recentFavoritesText = computed(() => {
       return lang.value === "zh" ? "最近收藏案件" : "Recently Favorited Cases";
@@ -225,7 +188,7 @@ export default {
       //   keyword: searchText.value,
       //   country: filter.value.country,
       //   time: filter.value.time,
-      //   caseType: filter.value.caseType,
+      //   // caseType: filter.value.caseType,
       // };
       // 执行搜索逻辑
       router.push("/case-query/search");
@@ -246,7 +209,7 @@ export default {
       lang,
       countryOptions,
       timeOptions,
-      caseTypeOptions,
+      // caseTypeOptions, // 删除
     };
   },
 };
@@ -255,7 +218,7 @@ export default {
 <style scoped>
 .home-view {
   padding: 20px;
-  display: flex;
+  display:  flex;
   display: grid;
   grid-template-areas:
     "favorite-cases"
@@ -278,11 +241,11 @@ export default {
 
 .search-area {
   background: transparent;
-  padding: 40px 0 0 0;
+  padding: 72px 0 0 0; /* 原为40px，改为72px，整体下移32px */
   display: flex;
   flex-direction: column;
   align-items: center;
-  font-size: 14px; /* 新增，保证筛选区和输入区字体不小于14px */
+  font-size: 14px;
 }
 .filter-bar {
   display: flex;

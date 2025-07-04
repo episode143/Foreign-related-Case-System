@@ -21,12 +21,13 @@
           </select>
         </div>
         <div class="filter-group">
-          <div class="filter-label">{{ lang === 'zh' ? '案件类型' : 'Case Type' }}</div>
-          <select v-model="filterType" class="filter-select">
+          <div class="filter-label">{{ lang === 'zh' ? '判决时间' : 'Judgment Time' }}</div>
+          <select v-model="filterTime" class="filter-select">
             <option value="">{{ lang === 'zh' ? '全部' : 'All' }}</option>
-            <option v-for="item in typeOptions" :key="item.value" :value="item.value">
-              {{ lang === 'zh' ? item.label : item.enLabel }}
-            </option>
+            <option value="1">{{ lang === 'zh' ? '最近一年' : 'Last 1 year' }}</option>
+            <option value="3">{{ lang === 'zh' ? '最近三年' : 'Last 3 years' }}</option>
+            <option value="5">{{ lang === 'zh' ? '最近五年' : 'Last 5 years' }}</option>
+            <option value="10">{{ lang === 'zh' ? '最近十年' : 'Last 10 years' }}</option>
           </select>
         </div>
       </div>
@@ -59,12 +60,7 @@
             </div>
             <div class="case-card-row">
               <span class="case-tags">
-                {{ lang === "zh" ? "类型" : "Tags" }}：
-                {{
-                  lang === 'zh'
-                    ? (typeOptions.find(opt => opt.value === item.type)?.label || item.typeLabel)
-                    : (typeOptions.find(opt => opt.value === item.type)?.enLabel || item.typeLabel)
-                }}
+                {{ lang === "zh" ? "标签" : "Tags" }}：{{ item.tags || '' }}
               </span>
               <span class="case-link" @click="showCase(item)">{{ lang === "zh" ? "查看":"View" }}</span>
             </div>
@@ -82,7 +78,7 @@
           :page-size="16"
           :pager-count="11"
           layout="prev, pager, next"
-          :total="1000"
+          :total="filteredCases.length"
           v-model:current-page="page"
         />
       </div>
@@ -111,63 +107,56 @@ export default {
     const store = useStore();
     const lang = computed(() => store.getters.lang);
 
-    // 选项
+    // 只保留中美日韩
     const countryOptions = [
       { value: "china", label: "中国", enLabel: "China" },
       { value: "usa", label: "美国", enLabel: "USA" },
-      { value: "uk", label: "英国", enLabel: "UK" },
-      { value: "france", label: "法国", enLabel: "France" },
       { value: "japan", label: "日本", enLabel: "Japan" },
       { value: "korea", label: "韩国", enLabel: "Korea" },
-      { value: "russia", label: "俄罗斯", enLabel: "Russia" },
-      { value: "germany", label: "德国", enLabel: "Germany" },
-    ];
-    const typeOptions = [
-      { value: "theft", label: "盗窃", enLabel: "Theft" },
-      { value: "fraud", label: "诈骗", enLabel: "Fraud" },
-      { value: "intentional_injury", label: "故意伤害", enLabel: "Intentional Injury" },
-      { value: "traffic_accident", label: "交通肇事", enLabel: "Traffic Accident" },
-      { value: "contract_dispute", label: "合同纠纷", enLabel: "Contract Dispute" },
-      { value: "labor_dispute", label: "劳动争议", enLabel: "Labor Dispute" },
-      { value: "divorce", label: "离婚案", enLabel: "Divorce" },
-      { value: "property_damage", label: "财产损害赔偿纠纷", enLabel: "Property Damage" },
-      { value: "house_sale", label: "房屋买卖合同纠纷", enLabel: "House Sale Dispute" },
-      { value: "tort_liability", label: "侵权责任纠纷", enLabel: "Tort Liability" },
-      { value: "medical_accident", label: "医疗事故纠纷", enLabel: "Medical Accident" },
-      { value: "ip_dispute", label: "知识产权纠纷", enLabel: "IP Dispute" },
-      { value: "admin_penalty", label: "行政处罚纠纷", enLabel: "Admin Penalty" },
-      { value: "land_expropriation", label: "土地征收补偿争议", enLabel: "Land Expropriation" },
-      { value: "admin_license", label: "行政许可争议", enLabel: "Admin License" },
-      { value: "other", label: "其它类型", enLabel: "Other" },
     ];
 
-    // 示例数据
+    // 判决时间选项
+    // const timeOptions = [
+    //   { value: "", label_zh: "全部", label_en: "All" },
+    //   { value: "1", label_zh: "最近一年", label_en: "Last 1 year" },
+    //   { value: "3", label_zh: "最近三年", label_en: "Last 3 years" },
+    //   { value: "5", label_zh: "最近五年", label_en: "Last 5 years" },
+    //   { value: "10", label_zh: "最近十年", label_en: "Last 10 years" },
+    // ];
+
+    // 示例数据（只保留中美日韩）
     const cases = ref(Array.from({ length: 30 }).map((_, i) => {
-      const countryIdx = i % countryOptions.length;
-      const typeIdx = i % typeOptions.length;
+      const countryArr = ["china", "usa", "japan", "korea"];
+      const countryIdx = i % countryArr.length;
       return {
         id: i + 1,
         title: `案例${i + 1}`,
-        country: countryOptions[countryIdx].value,
-        court: ["北京市中级法院", "纽约地方法院", "伦敦高等法院", "巴黎地方法院", "柏林法院"][i % 5],
-        date: `2024.${(i % 12) + 1}.${(i % 28) + 1}`,
-        type: typeOptions[typeIdx].value,
+        country: countryArr[countryIdx],
+        court: ["北京市中级法院", "纽约地方法院", "东京地方法院", "首尔法院"][countryIdx],
+        date: `202${4 - (i % 4)}.${(i % 12) + 1}.${(i % 28) + 1}`,
+        tags: ["合同纠纷", "侵权", "劳动争议", "交通事故"][countryIdx],
       };
     }));
 
     // 过滤器
     const filterCountry = ref("");
-    const filterType = ref("");
+    const filterTime = ref("");
     const isCollapsed = ref(true);
 
     // 分页
     const page = ref(1);
     const filteredCases = computed(() => {
       return cases.value.filter(item => {
-        return (
-          (filterCountry.value ? item.country === filterCountry.value : true) &&
-          (filterType.value ? item.type === filterType.value : true)
-        );
+        // 国家
+        const matchCountry = filterCountry.value ? item.country === filterCountry.value : true;
+        // 判决时间
+        let matchTime = true;
+        if (filterTime.value) {
+          const year = parseInt(item.date.split(".")[0]);
+          const nowYear = new Date().getFullYear();
+          matchTime = nowYear - year < parseInt(filterTime.value);
+        }
+        return matchCountry && matchTime;
       });
     });
     const pagedCases = computed(() =>
@@ -187,10 +176,10 @@ export default {
 
 **案件名称：** ${item.title}
 
-**国家：** ${item.countryLabel}  
+**国家：** ${item.country}  
 **法院：** ${item.court}  
 **日期：** ${item.date}  
-**案件类型：** ${item.typeLabel}
+**标签：** ${item.tags}
 
 ---
 
@@ -203,9 +192,8 @@ export default {
       lang,
       isCollapsed,
       filterCountry,
-      filterType,
+      filterTime,
       countryOptions,
-      typeOptions,
       page,
       filteredCases,
       pagedCases,
