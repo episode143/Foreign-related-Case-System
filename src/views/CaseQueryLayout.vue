@@ -16,25 +16,42 @@
         >
           <el-menu-item index="1">
             <i class="iconfont icon-sousuo2" style="font-size: 26px"></i>
-            <span v-if="!collapsed" style="margin-left: 15px; font-size: 15px">{{ lang === "zh" ? "搜索案例" : "Search Cases" }}</span>
+            <span v-if="!collapsed" style="margin-left: 15px; font-size: 15px">{{
+              lang === "zh" ? "搜索案例" : "Search Cases"
+            }}</span>
           </el-menu-item>
           <el-menu-item index="2">
             <i class="iconfont icon-shoucang_shixin" style="font-size: 25px"></i>
-            <span v-if="!collapsed" style="margin-left: 15px; font-size: 15px">{{ lang === "zh" ? "收藏案件" : "Favorites" }}</span>
+            <span v-if="!collapsed" style="margin-left: 15px; font-size: 15px">{{
+              lang === "zh" ? "收藏案件" : "Favorites"
+            }}</span>
           </el-menu-item>
           <el-menu-item index="3">
             <i class="iconfont icon-lishixiao1" style="font-size: 20px;margin-left: 1px;"></i>
-            <span v-if="!collapsed" style="margin-left: 15px; font-size: 15px">{{ lang === "zh" ? "历史记录" : "History" }}</span>
+            <span v-if="!collapsed" style="margin-left: 15px; font-size: 15px">{{
+              lang === "zh" ? "历史记录" : "History"
+            }}</span>
           </el-menu-item>
         </el-menu>
       </el-aside>
+
       <el-container>
         <el-header class="header-bar">
           <div class="header-title">
-            <span style="font-size: 18px; margin-left: 23px">{{ lang === "zh" ? "涉外案例查询分析系统" : "Foreign Case Query & Analysis System" }}</span>
+            <span style="font-size: 18px; margin-left: 23px">{{
+              lang === "zh" ? "涉外案例查询分析系统" : "Foreign Case Query & Analysis System"
+            }}</span>
           </div>
           <div class="header-actions">
-            <el-switch v-model="lang" :active-value="'en'" :inactive-value="'zh'" active-text="EN" inactive-text="中文" style="margin-right: 24px" @change="changeLang" />
+            <el-switch
+              v-model="lang"
+              :active-value="'en'"
+              :inactive-value="'zh'"
+              active-text="EN"
+              inactive-text="中文"
+              style="margin-right: 24px"
+              @change="changeLang"
+            />
             <el-dropdown trigger="hover" placement="bottom-end">
               <span class="avatar-dropdown" style="display: inline-block">
                 <div style="height: 32px; width: 32px; border-radius: 50%; background-color: #1883ff; display: flex; justify-content: center; align-items: center">
@@ -43,17 +60,14 @@
               </span>
               <template #dropdown>
                 <el-dropdown-menu>
-                  <el-dropdown-item disabled>
-                    {{ userEmail }}
-                  </el-dropdown-item>
-                  <el-dropdown-item divided @click="logout">
-                    {{ lang === "zh" ? "退出登录" : "Logout" }}
-                  </el-dropdown-item>
+                  <el-dropdown-item disabled>{{ userEmail }}</el-dropdown-item>
+                  <el-dropdown-item divided @click="logout">{{ lang === "zh" ? "退出登录" : "Logout" }}</el-dropdown-item>
                 </el-dropdown-menu>
               </template>
             </el-dropdown>
           </div>
         </el-header>
+
         <el-main class="main-content">
           <router-view></router-view>
         </el-main>
@@ -73,24 +87,36 @@ export default {
     Menu,
   },
   setup() {
+    // =============================
+    // ✅ 响应式变量定义
+    // =============================
     const collapsed = ref(true);
     const activeMenu = ref("1");
+    const userEmail = ref(sessionStorage.getItem("userEmail") || "");
+
     const router = useRouter();
     const route = useRoute();
-    const userEmail = ref(sessionStorage.getItem("userEmail") || "");
     const store = useStore();
+
+    // =============================
+    // ✅ 计算属性
+    // =============================
     const lang = computed(() => store.getters.lang);
-    const changeLang = (val) => {
-      //localStorage.setItem("lang", val);
-      store.commit("setLang", val);
+
+    // =============================
+    // ✅ 初始化方法
+    // =============================
+    const initApp = () => {
+      const currentLang = localStorage.getItem("lang") || "zh";
+      store.commit("setLang", currentLang);
+
+      userEmail.value = sessionStorage.getItem("userEmail") || "";
+      activeMenu.value = pathToMenu(route.path);
     };
 
-    const logout = () => {
-      sessionStorage.removeItem("token");
-      sessionStorage.removeItem("userEmail");
-      router.push("/login");
-    };
-
+    // =============================
+    // ✅ 菜单相关逻辑
+    // =============================
     const handleMenuSelect = (index) => {
       activeMenu.value = index;
       if (index === "1") {
@@ -102,14 +128,31 @@ export default {
       }
     };
 
-    // 路由与菜单编号的映射
     const pathToMenu = (path) => {
       if (path.includes("/case-query/favorite")) return "2";
       if (path.includes("/case-query/history")) return "3";
       return "1";
     };
 
-    // 路由变化时同步菜单高亮
+    // =============================
+    // ✅ 语言切换逻辑
+    // =============================
+    const changeLang = (val) => {
+      store.commit("setLang", val);
+    };
+
+    // =============================
+    // ✅ 登出逻辑
+    // =============================
+    const logout = () => {
+      sessionStorage.removeItem("token");
+      sessionStorage.removeItem("userEmail");
+      router.push("/login");
+    };
+
+    // =============================
+    // ✅ 路由监听逻辑
+    // =============================
     watch(
       () => route.path,
       (newPath) => {
@@ -118,17 +161,16 @@ export default {
       { immediate: true }
     );
 
+    // =============================
+    // ✅ 生命周期
+    // =============================
     onMounted(() => {
-      lang.value = localStorage.getItem("lang") || "zh";
-      userEmail.value = sessionStorage.getItem("userEmail") || "";
-      // 根据当前路由设置菜单高亮
-      if (router.currentRoute.value.path.includes("/case-query/favorite")) {
-        activeMenu.value = "2";
-      } else {
-        activeMenu.value = "1";
-      }
+      initApp();
     });
 
+    // =============================
+    // ✅ 返回模板所需数据
+    // =============================
     return {
       collapsed,
       lang,
