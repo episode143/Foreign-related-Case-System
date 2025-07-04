@@ -231,11 +231,16 @@ export default {
       router.push("/case-query/search");
     };
 
+    const goToCaseDetail = () => {
+      router.push("/case-query/favorite");
+    };
+
     return {
       searchText,
       filter,
       favoriteCases,
       searchCases,
+      goToCaseDetail,
       recentFavoritesText,
       searchPlaceholderText,
       lang,
