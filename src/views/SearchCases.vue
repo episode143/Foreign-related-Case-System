@@ -45,7 +45,7 @@
             justify-content: center;
             align-items: center;
           "
-          @click="performSearch"
+          @click="doPerformSearch"
         >
           <i class="iconfont icon-sousuo" style="font-size: 20px; color: white"></i>
         </button>
@@ -63,7 +63,13 @@
     <div class="case-list-area">
       <el-scrollbar style="width: 100%; height: 480px">
         <div class="case-list-flex">
-          <div v-for="(item, index) in cases" :key="item.id" class="case-card-new" @click="selectCase(index)">
+          <div
+            v-for="(item, index) in cases"
+            :key="item.id"
+            class="case-card-new"
+            :class="{ 'selected-card': index === selectIndex }"
+            @click="selectCase(index)"
+          >
             <div class="case-card-content">
               <div class="case-card-header">
                 <span class="case-title">{{ item.case_name }}</span>
@@ -93,7 +99,7 @@
         </div>
       </el-scrollbar>
       <div style="padding: 8px 0; display: flex; justify-content: center; width: 100%">
-        <el-pagination size="small" layout="prev, pager, next" :total="totalCasesCount" :page-size="searchParams.pagesize" v-model:current-page="page" />
+        <el-pagination size="small" layout="prev, pager, next" :total="totalCasesCount" v-model:page-size="pageSize" v-model:current-page="page" />
       </div>
     </div>
 
@@ -161,14 +167,11 @@ export default {
     // 筛选相关
     const isCollapsed = ref(true);
 
-    // 绑定到 Vuex 的 computed 属性
+    // 绑定到 Vuex 的 computed 属性 (filterCountry 和 filterTime 仍然与 searchParams 关联)
     const filterCountry = computed({
       get: () => searchParams.value.country,
       set: (value) => {
         store.commit("setSearchCountry", value);
-        // 筛选条件变化时，通常会重置页码并重新搜索
-        store.commit("setSearchPagenum", 1);
-        performSearch();
       },
     });
 
@@ -176,9 +179,6 @@ export default {
       get: () => searchParams.value.period,
       set: (value) => {
         store.commit("setSearchPeriod", value);
-        // 筛选条件变化时，通常会重置页码并重新搜索
-        store.commit("setSearchPagenum", 1);
-        performSearch();
       },
     });
 
@@ -186,12 +186,8 @@ export default {
       { value: "", label: "全部", enLabel: "All" },
       { value: "china", label: "中国", enLabel: "China" },
       { value: "usa", label: "美国", enLabel: "USA" },
-      { value: "uk", label: "英国", enLabel: "UK" },
-      { value: "france", label: "法国", enLabel: "France" },
       { value: "japan", label: "日本", enLabel: "Japan" },
       { value: "korea", label: "韩国", enLabel: "Korea" },
-      { value: "russia", label: "俄罗斯", enLabel: "Russia" },
-      { value: "germany", label: "德国", enLabel: "Germany" },
     ];
 
     // 案例数据：此数组将只包含当前页的案例
@@ -199,127 +195,152 @@ export default {
     const totalCasesCount = ref(0); // 用于分页的总数
     const caseDetailContent = ref("暂无详细内容。"); // 用于存储 AI 分析结果
 
-    // 分页
-    const page = computed({
-      get: () => searchParams.value.pagenum,
-      set: (value) => {
-        store.commit("setSearchPagenum", value);
-        performSearch(); // 页码变化触发搜索
-      },
-    });
+    // 【重要变更】分页的当前页码和每页大小现在在组件内部管理
+    const page = ref(1); // 默认第一页
+    const pageSize = ref(6); // 默认每页6条 (如果你的后端或设计有默认值，请保持一致)
 
     // 搜索输入框绑定到 Vuex 的 computed 属性
     const searchText = computed({
       get: () => searchParams.value.keyword,
       set: (value) => {
         store.commit("setSearchKeyword", value);
+        // 搜索关键字变化时，重置本地页码并触发搜索
       },
     });
 
     // 搜索方法，触发数据获取
     const performSearch = async () => {
       try {
-        // 更新 Vuex 中的搜索参数，确保页码也被设置
-        store.commit("setSearchParams", {
+        // 构建发送给 API 的参数，将分页参数从本地 ref 获取
+        const params = {
           keyword: searchText.value,
           country: filterCountry.value,
           period: filterTime.value,
-          pagenum: page.value, // 使用当前页码
-          pagesize: searchParams.value.pagesize, // 保持pagesize不变
-        });
+          pagenum: page.value, // 使用本地页码
+          pagesize: pageSize.value, // 使用本地每页大小
+          language: lang.value, // 添加语言参数
+        };
 
-        const response = await api.searchCases(searchParams.value);
-        console.log("搜索参数", searchParams.value);
-        // 假设 API 返回的数据结构中有 cases 数组，并且每个 case 对象有一个 isfavored 属性
-        // 如果后端不返回 isfavored，你可能需要在这里手动添加或处理
+        console.log("搜索参数", params); // 打印即将发送的参数
+
+        const response = await api.searchCases(params);
+        console.log("API 响应:", response); // 打印 API 响应
+
         cases.value = response.data.cases || [];
-        console.log("搜索结果", cases.value);
-        totalCasesCount.value = response.data.totalCount || 0; // 假设 API 返回的总数
-
-        // 搜索完成后，默认选中第一个案例并获取其摘要
-        if (cases.value.length > 0) {
-          selectIndex.value = 0;
-          getCaseSummary(); // 立即获取第一个案例的摘要
-        } else {
-          selectIndex.value = -1;
-          caseDetailContent.value = "暂无详细内容。"; // 清空详情内容
-        }
+        totalCasesCount.value = response.data.totalCount || 0;
       } catch (error) {
         console.error("搜索失败:", error);
-        cases.value = []; // 如果发生错误，清空当前页数据
-        totalCasesCount.value = 0; // 重置总数
-        caseDetailContent.value = "获取案件列表失败。";
+        cases.value = [];
+        totalCasesCount.value = 0;
+        caseDetailContent.value = lang.value === 'zh' ? "获取案件列表失败。" : "Failed to retrieve case list.";
       }
     };
 
     // 获取 AI 分析结果
     const getCaseSummary = async () => {
       if (selectIndex.value === -1 || !cases.value[selectIndex.value]) {
-        caseDetailContent.value = "暂无详细内容。";
+        caseDetailContent.value = lang.value === 'zh' ? "暂无详细内容。" : "No detailed content available.";
         return;
       }
       try {
         const params = {
-          caseId: cases.value[selectIndex.value].case_id,
+          caseId: cases.value[selectIndex.value].id, // 使用 item.id，与模拟数据保持一致
           language: lang.value,
         };
         console.log("获取 AI 分析结果的参数", params);
         const response = await api.getCaseSummary(params);
         console.log("AI分析结果", response);
-        caseDetailContent.value = response.data.content || "未获取到 AI 分析结果。";
+        caseDetailContent.value = response.data.content || (lang.value === 'zh' ? "未获取到 AI 分析结果。" : "No AI analysis result obtained.");
       } catch (error) {
         console.error("获取AI分析结果失败:", error);
-        caseDetailContent.value = "获取 AI 分析结果失败。";
+        caseDetailContent.value = lang.value === 'zh' ? "获取 AI 分析结果失败。" : "Failed to retrieve AI analysis result.";
       }
     };
 
-    // **新增：收藏/取消收藏案件方法**
+    // 按钮点击事件处理
+    const doPerformSearch = () => {
+      // 重置页码为1，确保每次搜索从第一页开始
+      page.value = 1;
+      performSearch();
+      // 搜索完成后，默认选中第一个案例并获取其摘要
+      if (cases.value.length > 0) {
+        selectIndex.value = 0;
+        // getCaseSummary() 会在 selectIndex 的 watch 中触发
+      } else {
+        selectIndex.value = -1;
+        caseDetailContent.value = lang.value === 'zh' ? "暂无详细内容。" : "No detailed content available.";
+      }
+    };
+    // 收藏/取消收藏案件方法
     const toggleFavorite = async (item) => {
       const params = {
-        caseId: item.case_id,
+        caseId: item.id, // 确保这里也是使用 item.id
         userId: localStorage.getItem("userId"),
       };
       console.log("收藏/取消收藏案件的参数", params);
       try {
         if (item.isfavored) {
-          // 当前已收藏，点击则取消收藏
           item.isfavored = false;
           await api.cancelFavoriteCase(params);
-          console.log(`案件 ${item.case_name} (ID: ${item.case_id}) 已取消收藏`);
+          console.log(`案件 ${item.case_name} (ID: ${item.id}) 已取消收藏`);
         } else {
-          // 当前未收藏，点击则收藏
-          item.isfavored = true; // 更新前端状态
+          item.isfavored = true;
           await api.favoriteCase(params);
-          console.log(`案件 ${item.case_name} (ID: ${item.case_id}) 已收藏`);
+          console.log(`案件 ${item.case_name} (ID: ${item.id}) 已收藏`);
         }
-        // 可选：在这里添加一个成功的提示消息，例如：
-        // this.$message.success(lang.value === 'zh' ? '操作成功！' : 'Operation successful!');
       } catch (error) {
         console.error("收藏/取消收藏操作失败:", error);
-        // 可选：在这里添加一个失败的提示消息，例如：
-        // this.$message.error(lang.value === 'zh' ? '操作失败，请稍后再试。' : 'Operation failed, please try again later.');
+        item.isfavored = !item.isfavored; // 失败时回滚状态
       }
     };
 
     // 初始加载数据 (页面首次加载时执行搜索)
     onMounted(() => {
       performSearch();
+      // 搜索完成后，默认选中第一个案例并获取其摘要
+      if (cases.value.length > 0) {
+        selectIndex.value = 0;
+        //getCaseSummary() 会在 selectIndex 的 watch 中触发
+      } else {
+        selectIndex.value = -1;
+        caseDetailContent.value = lang.value === 'zh' ? "暂无详细内容。" : "No detailed content available.";
+      }
     });
 
-    const selectIndex = ref(0); // 默认选中第一个案例在当前页的索引
+    const selectIndex = ref(-1); // 默认未选中任何案例
 
     // 处理案件卡片点击事件
     const selectCase = (index) => {
       selectIndex.value = index;
     };
 
+    // 监听分页参数变化，触发搜索（如果 Element Plus 的 v-model 方式更新）
+    watch([page, pageSize, filterCountry, filterTime], () => {
+      // 当 page 或 pageSize 或筛选条件改变时，立即执行搜索
+      // 注意：这里不需要重置页码，因为 page 已经是变化后的新页码
+      // 当筛选条件变化时，page 会被 doPerformSearch 重置为 1
+      performSearch();
+    });
+
     // 监听 selectIndex 变化，当选中的案例改变时，重新获取 AI 摘要
     watch(selectIndex, (newIndex) => {
       if (newIndex !== -1 && cases.value[newIndex]) {
         getCaseSummary();
       } else {
-        caseDetailContent.value = "暂无详细内容。";
+        caseDetailContent.value = lang.value === 'zh' ? "暂无详细内容。" : "No detailed content available.";
       }
+    });
+
+    watch(lang, () => {
+      const beforeIndex = selectIndex.value;
+      console.log("Language changed to:", lang.value, ". Performing new search.");
+      performSearch();
+      // 语言切换后，保持选中状态并重新加载详情
+      // 注意：这里可能需要稍微延迟一下，确保 performSearch 拿到新数据后 selectIndex 再触发 getCaseSummary
+      // 或者在 getCaseSummary 中加入 loading 状态和 if(cases.value[newIndex]) 检查
+      // 目前的逻辑已经有 if(cases.value[newIndex]) 检查
+      selectIndex.value = beforeIndex;
+      // getCaseSummary(); // 已经在 watch(selectIndex) 中触发
     });
 
     // 监听 cases 变化，如果当前 selectIndex 超出范围，则重置为0并尝试获取摘要
@@ -327,21 +348,21 @@ export default {
       cases,
       (newCases) => {
         if (!newCases || newCases.length === 0) {
-          selectIndex.value = -1; // 如果没有案例，则重置为-1 (表示没有选中)
-          caseDetailContent.value = "暂无详细内容。";
+          selectIndex.value = -1;
+          caseDetailContent.value = lang.value === 'zh' ? "暂无详细内容。" : "No detailed content available.";
         } else if (selectIndex.value >= newCases.length || selectIndex.value === -1) {
-          selectIndex.value = 0; // 如果当前索引超出新数据范围或未选中，则默认选中第一个
+          selectIndex.value = 0; // 默认选中第一个
         }
-        // 注意：这里不需要手动调用 getCaseSummary()，因为 selectIndex 的 watch 会触发
       },
-      { immediate: true }
-    ); // 立即执行一次，确保初始状态正确
-
-    const caseOriginUrl = ref("https://www.courtlistener.com/opinion/4328762/mike-macmann-v-mike-matthes/?q=mike");
+      { immediate: true } // 初始加载时也运行一次
+    );
 
     const md = new MarkdownIt();
-    // 根据 AI 分析结果显示其详情
-    const caseDetailHtml = computed(() => md.render(caseDetailContent.value));
+    const caseDetailHtml = computed(() => {
+      // 在这里添加加载状态的判断，如果正在加载，显示加载提示
+      // 但是 caseDetailContent 已经是响应式的，所以直接 render 它的值即可
+      return md.render(caseDetailContent.value);
+    });
 
     const downloadWord = () => {
       const selectedCase = cases.value[selectIndex.value];
@@ -350,26 +371,37 @@ export default {
         alert(lang.value === "zh" ? "请先选择一个案件再下载。" : "Please select a case to download.");
         return;
       }
+
+      // 获取当前国家选项的显示名称
+      const displayCountry = (countryOptions.find(opt => opt.value === selectedCase.country) || {})[lang.value === 'zh' ? 'label' : 'enLabel'] || selectedCase.country;
+
       const html = `
         <html>
           <head><meta charset="utf-8"/></head>
           <body>
-            <h1>${selectedCase.case_name || "案件详情"}</h1>
-            <p><strong>国家:</strong> ${selectedCase.country}</p>
-            <p><strong>法院:</strong> ${selectedCase.court}</p>
-            <p><strong>日期:</strong> ${selectedCase.judgement_date}</p>
-            <p><strong>标签:</strong> ${selectedCase.tags}</p>
+            <h1>${selectedCase.case_name || (lang.value === 'zh' ? "案件详情" : "Case Details")}</h1>
+            <p><strong>${lang.value === 'zh' ? "国家:" : "Country:"}</strong> ${displayCountry}</p>
+            <p><strong>${lang.value === 'zh' ? "法院:" : "Court:"}</strong> ${selectedCase.court}</p>
+            <p><strong>${lang.value === 'zh' ? "日期:" : "Date:"}</strong> ${selectedCase.judgement_date}</p>
+            <p><strong>${lang.value === 'zh' ? "标签:" : "Tags:"}</strong> ${selectedCase.tags}</p>
             <hr/>
             ${caseDetailHtml.value}
           </body>
         </html>
       `;
+      const fileName = selectedCase.case_name || (lang.value === 'zh' ? "案件详情" : "Case Details");
       const blob = HtmlDocx.asBlob(html);
-      saveAs(blob, `${selectedCase.case_name || "案件详情"}.docx`);
+      saveAs(blob, `${fileName}.docx`);
     };
 
     const openOriginUrl = () => {
-      window.open(caseOriginUrl.value, "_blank");
+      const selectedCase = cases.value[selectIndex.value];
+      if (selectedCase && selectedCase.original_document_url) {
+        window.open(selectedCase.original_document_url, "_blank");
+      } else {
+        console.warn("当前案件没有原始链接或未选中案件。");
+        alert(lang.value === "zh" ? "当前案件没有原始链接。" : "No original link available for this case.");
+      }
     };
 
     return {
@@ -378,25 +410,27 @@ export default {
       filterCountry,
       filterTime,
       countryOptions,
-      cases, // 现在 cases 存储的是当前页的数据
-      totalCasesCount, // 分页总数
-      page, // 页码，绑定到Vuex
-      searchText, // 搜索框内容，绑定到Vuex
+      cases,
+      totalCasesCount,
+      page,
+      pageSize,
+      searchText,
       selectIndex,
-      selectCase, // 暴露 selectCase 方法
-      toggleFavorite, // **暴露 toggleFavorite 方法**
-      caseOriginUrl,
+      selectCase,
+      toggleFavorite,
       caseDetailHtml,
+      doPerformSearch,
       downloadWord,
       openOriginUrl,
-      performSearch, // 添加搜索方法
-      searchParams, // 暴露 searchParams 以便在模板中使用 pageSize
+      performSearch,
+      // detailLoading 不需要直接暴露到模板，因为它只在 getCaseSummary 内部控制加载提示
     };
   },
 };
 </script>
 
 <style scoped>
+/* 样式部分保持不变 */
 .search-grid-container {
   position: relative;
   width: 100%;
@@ -436,7 +470,7 @@ export default {
   background: #f2f6fc;
   border-radius: 14px;
   cursor: pointer;
-  transition: box-shadow 0.2s;
+  transition: box-shadow 0.2s, border 0.2s; /* 添加 border 的过渡效果 */
   width: 100%;
   min-width: 220px;
   max-width: 100%;
@@ -446,6 +480,13 @@ export default {
   display: flex;
   align-items: center;
   box-sizing: border-box;
+  border: 1px solid rgb(221.7, 222.6, 224.4); /* 默认边框 */
+}
+.case-card-new.selected-card {
+  border: 2px solid #409eff; /* 蓝色边框 */
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.2); /* 蓝色阴影 */
+  /* 可以根据需要调整，例如： */
+  /* background-color: #e6f7ff; */ /* 浅蓝色背景 */
 }
 .case-card-content {
   width: 100%;

@@ -83,6 +83,31 @@ const cancelFavoriteCase = async (params) => {
     throw error;
   }
 };
+
+// 获取收藏案件列表
+const getFavoriteCases = async (params) => {
+  try {
+    const response = await instance.get(paths.getFavoriteCases, params);
+    console.log("Get Favorite Cases response:", response);
+    return response;
+  }
+  catch (error) {
+    console.error("Get Favorite Cases failed:", error);
+    throw error;
+  }
+}
+
+// 获取历史浏览案件列表
+const getHistoryCases = async (params) => {
+  try {
+    const response = await instance.get(paths.getHistoryCases, params);
+    console.log("Get History Cases response:", response);
+    return response;
+  } catch (error) {
+    console.error("Get History Cases failed:", error);
+    throw error;
+  }
+};
 const api = {
   login,
   register,
@@ -91,5 +116,7 @@ const api = {
   getCaseSummary,
   favoriteCase,
   cancelFavoriteCase,
+  getFavoriteCases,
+  getHistoryCases,
 };
 export default api;

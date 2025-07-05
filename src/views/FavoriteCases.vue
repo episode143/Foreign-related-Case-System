@@ -1,6 +1,5 @@
 <template>
   <div class="search-grid-container">
-    <!-- 左侧折叠筛选框 -->
     <div :class="['left-panel', { collapsed: isCollapsed }]">
       <button class="collapse-btn" :class="{ collapsed: isCollapsed }" @click="isCollapsed = !isCollapsed">
         <span v-if="isCollapsed">⮞</span>
@@ -35,21 +34,20 @@
         </div>
       </div>
     </div>
-    <!-- 输入区占位 -->
     <div style="grid-area: input-area; background-color: transparent"></div>
-    <!-- 收藏列表区 -->
     <div class="case-list-area">
       <el-scrollbar style="width: 100%; height: 590px">
         <div class="case-list-flex">
           <div
-            v-for="(item, index) in pagedCases"
-            :key="item.id"
+            v-for="(item, index) in cases"
+            :key="item.case_id"
             class="case-card-new"
-            @click="selectIndex = (page - 1) * pageSize + index"
+            @click="selectCase(index)"
+            :class="{ 'selected-card': index === selectIndex }"
           >
             <div class="case-card-content">
               <div class="case-card-header">
-                <span class="case-title">{{ item.title }}</span>
+                <span class="case-title">{{ item.case_name }}</span>
                 <i
                   class="iconfont icon-shoucang_shixin"
                   :style="{
@@ -58,31 +56,33 @@
                     color: '#409EFF',
                     cursor: 'pointer'
                   }"
-                  @click.stop="unFavorite(item.id)"
+                  @click.stop="unFavorite(item.case_id)"
                   title="取消收藏"
                 ></i>
               </div>
               <div class="case-card-row">
                 <span class="case-country">
                   {{
-                    (countryOptions.find(opt => opt.value === item.country) || {})[
-                      lang === 'zh' ? 'label' : 'enLabel'
-                    ]
+                    item.country
                   }}
                 </span>
-                <span class="case-court">{{ item.court }}</span>
-                <span class="case-date">{{ item.date }}</span>
+                <span class="case-court">{{ item.court || (lang === 'zh' ? '未知法院' : 'Unknown Court') }}</span> 
+                <span class="case-date">{{ item.judgement_date }}</span>
               </div>
               <div class="case-card-row">
                 <span class="case-tags">
                   {{ lang === "zh" ? "类型" : "Tags" }}：
-                  {{
-                    item.tags
-                  }}
+                  {{ item.tags || (lang === 'zh' ? '暂无标签' : 'No Tags') }}
                 </span>
-                <a href="#" class="case-link" @click.prevent="viewCase(item.id)">{{ lang === "zh" ? "查看" : "View" }}</a>
+                <a href="#" class="case-link" @click.prevent="selectCase(index)">{{ lang === "zh" ? "查看" : "View" }}</a>
               </div>
             </div>
+          </div>
+          <div v-if="cases.length === 0 && !loading" class="no-cases-message">
+            {{ lang === 'zh' ? '暂无收藏案件。' : 'No favorite cases found.' }}
+          </div>
+          <div v-if="loading" class="loading-message">
+            {{ lang === 'zh' ? '加载中...' : 'Loading...' }}
           </div>
         </div>
       </el-scrollbar>
@@ -90,15 +90,13 @@
         <el-pagination
           size="small"
           layout="prev, pager, next"
-          :total="filteredCases.length"
-          :page-size="pageSize"
+          :total="totalCasesCount"
+          v-model:page-size="pageSize"
           v-model:current-page="page"
         />
       </div>
     </div>
-    <!-- 详情区 -->
     <div style="grid-area: case-content-area;background-color: transparent;">
-      <!-- 顶部栏 -->
       <div
         style="
           border-top-left-radius: 10px;
@@ -117,7 +115,7 @@
           {{ lang === "zh" ? "智能案件分析 :" : "Case Analysis :" }}
         </span>
         <span style="font-weight: 600; font-size: 16px; color: #333; margin-left: 10px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-          {{ cases[selectIndex]?.title || (lang === 'zh' ? '请选择案件' : 'Please select a case') }}
+          {{ cases[selectIndex]?.case_name || (lang === 'zh' ? '请选择案件' : 'Please select a case') }}
         </span>
         <span
           style="font-weight: 600; font-size: 16px; color: #909399; cursor: pointer; margin-left: 24px;"
@@ -131,7 +129,6 @@
           @click="downloadWord"
         ></i>
       </div>
-      <!-- 内容区 -->
       <div
         style="
           width: 100%;
@@ -152,13 +149,13 @@
   </div>
 </template>
 
-
 <script>
-import { ref, computed } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 import MarkdownIt from "markdown-it";
 import HtmlDocx from "html-docx-js/dist/html-docx";
 import { saveAs } from "file-saver";
 import { useStore } from "vuex";
+import api from "../api/index"; // 确保你有一个 api 模块来处理后端请求
 
 export default {
   name: "FavoriteCases",
@@ -168,141 +165,211 @@ export default {
     // ==============================
     const store = useStore();
     const lang = computed(() => store.getters.lang);
-    
+    const favoriteSearchParams = store.getters.favoriteSearchParams; // 从 Vuex 获取收藏夹搜索参数，用于初始值
+
     // 布局控制状态
     const isCollapsed = ref(true);
     
-    // 分页状态
-    const page = ref(1);
-    const pageSize = 5;
-    const selectIndex = ref(0);
-    
-    // 筛选状态
+    // 收藏案例数据和总数
+    const cases = ref([]); // 将不再是mock数据，而是通过API获取
+    const totalCasesCount = ref(0); // 从后端获取的总数
+    const loading = ref(false); // 加载状态
+
+    // 分页状态 (现在是本地 ref，从 Vuex 获取初始值)
+    const page = ref(favoriteSearchParams.pagenum || 1);
+    const pageSize = ref(5); // 页面中设置为5，这是固定的
+
+    // 选中案例的索引 (现在是本地 ref，从 Vuex 获取初始值)
+    const selectIndex = ref(favoriteSearchParams.selectedIndex || -1);
+    const selectCaseId = computed(() => {
+      if(selectIndex.value === -1 || !cases.value[selectIndex.value]) {
+        return null; // 如果没有选中案例，返回 null
+      } else {
+        return cases.value[selectIndex.value].case_id; // 返回选中案例的 ID
+      }
+    });
+    // 筛选状态 (现在是本地 ref，从 Vuex 获取初始值)
     const filterCountry = ref("");
     const filterTime = ref("");
 
     // ==============================
     // 2. 配置数据
     // ==============================
-    // 国家选项
+    // 国家选项 (扩展以匹配更广泛的数据)
     const countryOptions = [
+      { value: "", label: "全部", enLabel: "All" },
       { value: "中国", label: "中国", enLabel: "China" },
       { value: "美国", label: "美国", enLabel: "USA" },
       { value: "日本", label: "日本", enLabel: "Japan" },
       { value: "韩国", label: "韩国", enLabel: "Korea" },
     ];
 
-    // 收藏案例数据
-    const cases = ref([
-      { id: 1, title: "多诺霍诉史蒂文森案", country: "美国", court: "沃兹吉边德法院", date: "2025.1.1", tags: "财务纠纷、故意伤人" },
-      { id: 2, title: "张华诉星辰公寓案", country: "中国", court: "北京市中级法院", date: "2024.12.1", tags: "合同纠纷" },
-      { id: 3, title: "丽诉味来食品公司案", country: "英国", court: "伦敦高等法院", date: "2024.11.1", tags: "侵权" },
-      { id: 4, title极: "彼得森诉数智互联案", country: "法国", court: "巴黎地方法院", date: "2024.10.1", tags: "知识产权" },
-      { id: 5, title: "劳埃德劳动纠纷案", country: "德国", court: "柏林法院", date: "2024.9.1", tags: "劳动争议" },
-      { id: 6, title: "东京地铁连环事故案", country: "日本", court: "东京地方法院", date: "2024.8.1", tags: "交通事故" },
-      { id: 7, title: "案例7", country: "韩国", court: "首尔法院", date: "2024.7.1", tags: "医疗纠纷" },
-    ]);
-
-    // 案例详情内容
-    const caseOriginUrl = ref('https://www.courtlistener.com/opinion/4328762/mike-macmann-v-mike-matthes/?q=mike');
-    const caseDetailMarkdown = ref(`
-### 法律案件解释：多诺霍诉史蒂文森案 (Donoghue v Stevenson)
-
-这是一份案例解释——一个在普通法系国家（如英国、加拿大、澳大利亚等）具有里程碑意义的法律案件：多诺霍诉史蒂文森案（Donoghue v Stevenson [1932] AC 562），又被称为"蜗牛案"。这个案件确立了现代侵权法中最重要的原则之一——**疏忽侵权 (Negligence)** 的原则。
-
-#### 1. 案件名称
-多诺霍诉史蒂文森案 (Donoghue v Stevenson)，或称"蜗牛案"。
-案件编号: [1932] AC 562
-
-#### 2. 案件背景/事实 (Background/Facts)
-1932年，一位名叫梅多诺霍（May Donoghue）的女士和朋友在苏格兰佩斯利的一家咖啡馆喝饮料，她的朋友为她点了一杯由生产商史蒂文森（Stevenson）公司生产的姜汁啤酒。当多诺霍女士喝到一半时，她发现瓶子里有一只已经腐烂的蜗牛尸体。
-
-看到蜗牛后，多诺霍女士受到了惊吓，并大病和因此上了胃肠炎和严重的精神打击。由于姜汁啤酒是朋友购买的，多诺霍女士与咖啡馆老板仅仅没有直接合同关系，普通法的传统，并没有合同关系就不能索赔。因此，多诺霍女士决定直接起诉案件中啤酒的生产商史蒂文森公司，理由是其疏忽（negligence）。她的律师，史蒂文森公司在生产过程中未能采取相应注意，导致蜗牛进入了瓶子，并对消费者造成了伤害。
-
-#### 3. 法律争议焦点 (Legal Issue)
-本案的核心法律争议是：
-
-**在没有直接合同关系的前提下，产品制造商对最终消费者是否负有避免疏忽行为的法律责任？**
-（即：是否在一个制造商对其产品最终使用者负有的"注意义务"（Duty of Care），即使两者之间没有合同关系？）
-
-#### 4. 法院判决 (Court Decision)
-英国上议院（House of Lords），于1932年做出了具有深远影响力的判决。上议院认为买卖双方的契约关系的狭义观点被突破，多诺霍女士
-    `);
+    const caseDetailContent = ref(""); // 用于存储 AI 分析结果，初始为空
 
     // Markdown 处理器
     const md = new MarkdownIt();
 
-    // ==============================
-    // 3. 计算属性
-    // ==============================
-    // 当前页展示的案例
-    const pagedCases = computed(() => {
-      const start = (page.value - 1) * pageSize;
-      return cases.value.slice(start, start + pageSize);
-    });
-
-    // 筛选后的案例
-    const filteredCases = computed(() => {
-      return cases.value.filter(item => {
-        const matchesCountry = filterCountry.value ? item.country === filterCountry.value : true;
-        const matchesTime = filterTime.value ? 
-          (new Date(item.date).getFullYear() >= new Date().getFullYear() - filterTime.value) : true;
-        return matchesCountry && matchesTime;
-      });
-    });
-
     // 案例详情HTML
-    const caseDetailHtml = computed(() => md.render(caseDetailMarkdown.value));
+    const caseDetailHtml = computed(() => md.render(caseDetailContent.value));
 
-    // ==============================
-    // 4. 函数方法
-    // ==============================
+    const getFavoriteCases = async () => {
+      try {
+        loading.value = true; // 开始加载
+        const params = {
+          userId: localStorage.getItem("userId"), // 从本地存储获取用户ID
+          language: lang.value,
+          pagenum: page.value,
+          pagesize: pageSize.value,
+          country: filterCountry.value,
+          period: filterTime.value,
+        };
+        console.log("获取收藏案件的参数", params);
+        const response = await api.getFavoriteCases(params);
+        if (response.code === 200) {
+          console.log("获取收藏案件成功:", response.data);
+          cases.value = response.data.cases || []; // 假设后端返回的数据结构中包含 cases 数组
+          totalCasesCount.value = response.data.totalCount || 0; // 假设后端返回的数据结构中包含 totalCount
+          if (cases.value.length > 0) {
+              selectIndex.value = 0; // 默认选中第一个案件
+          } else {
+            selectIndex.value = -1; // 如果没有案件，重置选中索引
+          }
+        } else {
+          console.error("Failed to fetch favorite cases:", response.message);
+        }
+      } catch (error) {
+        console.error("Error fetching favorite cases:", error);
+        alert(lang.value === 'zh' ? '获取收藏案件失败，请稍后再试。' : 'Failed to fetch favorite cases, please try again later.');
+      } finally {
+        loading.value = false; // 结束加载
+      }
+    };
+    const changeLangAndGetFavoriteCases = async () => {
+      try {
+        loading.value = true; // 开始加载
+        const params = {
+          userId: localStorage.getItem("userId"), // 从本地存储获取用户ID
+          language: lang.value,
+          pagenum: page.value,
+          pagesize: pageSize.value,
+          country: filterCountry.value,
+          period: filterTime.value,
+        };
+        console.log("获取收藏案件的参数", params);
+        const response = await api.getFavoriteCases(params);
+        if (response.code === 200) {
+          console.log("获取收藏案件成功:", response.data);
+          cases.value = response.data.cases || []; // 假设后端返回的数据结构中包含 cases 数组
+          totalCasesCount.value = response.data.totalCount || 0; // 假设后端返回的数据结构中包含 totalCount
+        } else {
+          console.error("Failed to fetch favorite cases:", response.message);
+        }
+      } catch (error) {
+        console.error("Error fetching favorite cases:", error);
+        alert(lang.value === 'zh' ? '获取收藏案件失败，请稍后再试。' : 'Failed to fetch favorite cases, please try again later.');
+      } finally {
+        loading.value = false; // 结束加载
+      }
+    };
+    onMounted(() => {
+      // 页面加载时获取收藏夹数据
+      getFavoriteCases();
+    });
+    const getCaseSummary = async () => {
+      if (selectIndex.value === -1 || !cases.value[selectIndex.value]) {
+        caseDetailContent.value = "暂无详细内容。";
+        return;
+      }
+      try {
+        const params = {
+          caseId: cases.value[selectIndex.value].case_id,
+          language: lang.value,
+        };
+        console.log("获取 AI 分析结果的参数", params);
+        const response = await api.getCaseSummary(params);
+        console.log("AI分析结果", response);
+        caseDetailContent.value = response.data.content || "未获取到 AI 分析结果。";
+      } catch (error) {
+        console.error("获取AI分析结果失败:", error);
+        caseDetailContent.value = "获取 AI 分析结果失败。";
+      }
+    };
+    watch([filterCountry, filterTime, page], () => {
+      // 当筛选条件或分页变化时重新获取数据
+      getFavoriteCases();
+    });
+    watch(selectCaseId, ()=>{
+      console.log("当前选中案件的ID", selectCaseId.value);
+      getCaseSummary();
+    });
+    watch(lang, () => {
+      // 当语言变化时重新获取收藏夹数据
+      changeLangAndGetFavoriteCases();
+    });
+    // 处理案例卡片点击事件
+    const selectCase = (index) => {
+      selectIndex.value = index;
+    };
+    
     // 导出Word文档
     const downloadWord = () => {
-      if (selectIndex.value >= 0 && selectIndex.value < cases.value.length) {
-        const html = `
-          <html>
-            <head><meta charset="utf-8"/></head>
-            <body>
-              ${caseDetailHtml.value}
-            </body>
-          </html>
-        `;
-        const blob = HtmlDocx.asBlob(html);
-        saveAs(blob, `${cases.value[selectIndex.value].title || '案件详情'}.docx`);
+      const selectedCase = cases.value[selectIndex.value];
+      if (!selectedCase) {
+        console.warn("No case selected for download.");
+        alert(lang.value === 'zh' ? "请先选择一个案件再下载。" : "Please select a case to download.");
+        return;
       }
+
+      const html = `
+        <html>
+          <head><meta charset="utf-8"/></head>
+          <body>
+            <h1>${selectedCase.case_name || (lang.value === 'zh' ? '案件详情' : 'Case Details')}</h1>
+            <p><strong>${lang.value === 'zh' ? '国家' : 'Country'}:</strong> ${selectedCase.country}</p>
+            <p><strong>${lang.value === 'zh' ? '法院' : 'Court'}:</strong> ${selectedCase.court || 'N/A'}</p>
+            <p><strong>${lang.value === 'zh' ? '判决日期' : 'Judgment Date'}:</strong> ${selectedCase.judgement_date}</p>
+            <p><strong>${lang.value === 'zh' ? '标签' : 'Tags'}:</strong> ${selectedCase.tags}</p>
+            <hr/>
+            ${caseDetailHtml.value}
+          </body>
+        </html>
+      `;
+      const blob = HtmlDocx.asBlob(html);
+      saveAs(blob, `${selectedCase.case_name || (lang.value === 'zh' ? '案件详情' : 'Case Details')}.docx`);
     };
 
     // 打开原始判决文书链接
     const openOriginUrl = () => {
-      window.open(caseOriginUrl.value, "_blank");
-    };
-
-    // 取消收藏
-    const unFavorite = (id) => {
-      const index = cases.value.findIndex(item => item.id === id);
-      if (index !== -1) {
-        cases.value.splice(index, 1);
-        const totalPages = Math.ceil(cases.value.length / pageSize);
-        
-        // 调整页码
-        if (page.value > totalPages && totalPages > 0) {
-          page.value = totalPages;
-        }
-        
-        // 调整选中索引
-        if (index === selectIndex.value && cases.value.length > 0) {
-          selectIndex.value = 0;
-        }
-        alert('取消收藏成功 ' + id);
+      const selectedCase = cases.value[selectIndex.value];
+      if (selectedCase && selectedCase.original_document_url) { 
+        window.open(selectedCase.original_document_url, "_blank");
+      } else {
+        console.warn("Current case has no original URL or no case is selected.");
+        alert(lang.value === 'zh' ? "当前案件没有原始链接或未选择案件。" : "No original link available for this case or no case is selected.");
       }
     };
 
-    // 查看案例详情
-    const viewCase = (id) => {
-      const index = cases.value.findIndex(item => item.id === id);
-      if (index !== -1) {
-        selectIndex.value = index;
+    // 取消收藏
+    const unFavorite = async (caseId) => {
+      if (!confirm(lang.value === 'zh' ? '确定要取消收藏此案件吗？' : 'Are you sure you want to unfavorite this case?')) {
+        return;
+      }
+
+      try {
+        const userId = localStorage.getItem("userId");
+        const response = await api.cancelFavoriteCase({ userId, caseId }); // 调用取消收藏API
+        if (response.code === 200) {
+            alert(lang.value === 'zh' ? '取消收藏成功。' : 'Unfavorited successfully.');
+            // 重新获取收藏列表以更新UI
+            // 调用 fetchFavoriteCases 会自动处理 selectIndex 的调整
+            getFavoriteCases(); 
+        } else {
+            alert(lang.value === 'zh' ? '取消收藏失败：' + response.message : 'Failed to unfavorite: ' + response.message);
+        }
+
+      } catch (error) {
+        console.error("Failed to unfavorite case:", error);
+        alert(lang.value === 'zh' ? '取消收藏失败，请稍后再试。' : 'Failed to unfavorite, please try again later.');
       }
     };
 
@@ -317,28 +384,30 @@ export default {
       selectIndex,
       filterCountry,
       filterTime,
-      
+      cases, // 现在是动态获取的
+      totalCasesCount, // 动态获取的总数
+      loading, // 加载状态
+
       // 配置数据
       countryOptions,
-      cases,
       
       // 计算属性
       lang,
-      pagedCases,
-      filteredCases,
       caseDetailHtml,
       
       // 方法函数
+      selectCase, // 将 case selection 逻辑封装
+      getFavoriteCases,
       downloadWord,
       openOriginUrl,
       unFavorite,
-      viewCase
     };
   },
 };
 </script>
 
 <style scoped>
+/* 保持原有的样式，并添加 selected-card 样式 */
 .search-grid-container {
   position: relative;
   width: 100%;
@@ -367,12 +436,21 @@ export default {
   margin-top: 8px;
   margin-bottom: 8px;
   width: 100%;
+  min-height: 400px; /* 确保在没有案件时也有一定的区域 */
+  align-content: flex-start; /* 当内容不足时，让项目从顶部开始 */
+}
+.no-cases-message, .loading-message {
+  width: 100%;
+  text-align: center;
+  color: #606266;
+  font-size: 16px;
+  margin-top: 50px;
 }
 .case-card-new {
   background: #f2f6fc;
   border-radius: 14px;
   cursor: pointer;
-  transition: box-shadow 0.2s;
+  transition: box-shadow 0.2s, border 0.2s; /* 添加 border 过渡 */
   width: 100%;
   min-width: 220px;
   max-width: 100%;
@@ -382,6 +460,15 @@ export default {
   display: flex;
   align-items: center;
   box-sizing: border-box;
+  border: 1px solid transparent; /* 默认透明边框 */
+}
+.case-card-new:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+.case-card-new.selected-card {
+  border: 2px solid #409eff; /* 蓝色边框 */
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.2); /* 蓝色阴影 */
+  /* background-color: #e6f7ff; */ /* 浅蓝色背景 (注释掉，表示不是必须的) */
 }
 .case-card-content {
   width: 100%;
@@ -395,6 +482,10 @@ export default {
   font-weight: 600;
   font-size: 16px;
   color: #222;
+  flex: 1; /* 允许标题占据可用空间 */
+  overflow: hidden; /* 隐藏溢出内容 */
+  white-space: nowrap; /* 不换行 */
+  text-overflow: ellipsis; /* 显示省略号 */
 }
 .case-card-row {
   display: flex;

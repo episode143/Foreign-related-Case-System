@@ -1,105 +1,78 @@
 <template>
   <div class="history-container">
     <div class="history-header">
-      {{ lang === 'zh' ? '历史记录' : 'History Records' }}
+      {{ lang === "zh" ? "历史记录" : "History Records" }}
     </div>
     <button class="collapse-btn" :class="{ collapsed: isCollapsed }" @click="isCollapsed = !isCollapsed">
       <span v-if="isCollapsed">⮜</span>
       <span v-else>⮞</span>
     </button>
-    <!-- 右侧折叠过滤器 -->
     <div :class="['right-panel', { collapsed: isCollapsed }]" :style="isCollapsed ? { pointerEvents: 'none' } : {}">
       <div v-show="!isCollapsed" class="panel-content">
-        <h3 style="margin-bottom:18px;">{{ lang === 'zh' ? '筛选' : 'Filter' }}</h3>
+        <h3 style="margin-bottom: 18px">{{ lang === "zh" ? "筛选" : "Filter" }}</h3>
         <div class="filter-group">
-          <div class="filter-label">{{ lang === 'zh' ? '国家' : 'Country' }}</div>
+          <div class="filter-label">{{ lang === "zh" ? "国家" : "Country" }}</div>
           <select v-model="filterCountry" class="filter-select">
-            <option value="">{{ lang === 'zh' ? '全部' : 'All' }}</option>
+            <option value="">{{ lang === "zh" ? "全部" : "All" }}</option>
             <option v-for="item in countryOptions" :key="item.value" :value="item.value">
-              {{ lang === 'zh' ? item.label : item.enLabel }}
+              {{ lang === "zh" ? item.label : item.enLabel }}
             </option>
           </select>
         </div>
         <div class="filter-group">
-          <div class="filter-label">{{ lang === 'zh' ? '判决时间' : 'Judgment Time' }}</div>
+          <div class="filter-label">{{ lang === "zh" ? "判决时间" : "Judgment Time" }}</div>
           <select v-model="filterTime" class="filter-select">
-            <option value="">{{ lang === 'zh' ? '全部' : 'All' }}</option>
-            <option value="1">{{ lang === 'zh' ? '最近一年' : 'Last 1 year' }}</option>
-            <option value="3">{{ lang === 'zh' ? '最近三年' : 'Last 3 years' }}</option>
-            <option value="5">{{ lang === 'zh' ? '最近五年' : 'Last 5 years' }}</option>
-            <option value="10">{{ lang === 'zh' ? '最近十年' : 'Last 10 years' }}</option>
+            <option value="">{{ lang === "zh" ? "全部" : "All" }}</option>
+            <option value="1">{{ lang === "zh" ? "最近一年" : "Last 1 year" }}</option>
+            <option value="3">{{ lang === "zh" ? "最近三年" : "Last 3 years" }}</option>
+            <option value="5">{{ lang === "zh" ? "最近五年" : "Last 5 years" }}</option>
+            <option value="10">{{ lang === "zh" ? "最近十年" : "Last 10 years" }}</option>
           </select>
         </div>
       </div>
     </div>
-    <!-- 右侧卡片区 -->
-    <div
-      class="card-area"
-      :class="{ 'expand': isCollapsed }"
-    >
-      <div class="card-grid">
-        <div
-          v-for="item in pagedCases"
-          :key="item.id"
-          class="case-card-new"
-        >
+    <div class="card-area" :class="{ expand: isCollapsed }">
+      <div v-if="loading" class="loading-message">
+        {{ lang === "zh" ? "加载中..." : "Loading..." }}
+      </div>
+      <div v-else-if="cases.length === 0 && !loading" class="no-cases-message">
+        {{ lang === "zh" ? "暂无历史记录。" : "No history records found." }}
+      </div>
+      <div v-else class="card-grid">
+        <div v-for="item in cases" :key="item.id" class="case-card-new">
           <div class="case-card-content">
             <div class="case-card-header">
-              <span class="case-title">{{ item.title }}</span>
+              <span class="case-title">{{ item.case_name }}</span>
             </div>
             <div class="case-card-row">
-              <span class="case-country">
-                {{
-                  (countryOptions.find(opt => opt.value === item.country) || {})[
-                    lang === 'zh' ? 'label' : 'enLabel'
-                  ]
-                }}
-              </span>
+              <span class="case-country"> {{ lang === "zh" ? "国家" : "Country" }}: {{ item.country }} </span>
               <span class="case-court">{{ item.court }}</span>
-              <span class="case-date">{{ item.date }}</span>
+              <span class="case-date">{{ item.judgement_date }}</span>
             </div>
             <div class="case-card-row">
-              <span class="case-tags">
-                {{ lang === "zh" ? "标签" : "Tags" }}：{{ item.tags || '' }}
-              </span>
-              <span class="case-link" @click="showCase(item)">{{ lang === "zh" ? "查看":"View" }}</span>
+              <span class="case-tags"> {{ lang === "zh" ? "标签" : "Tags" }}：{{ item.tags || "" }} </span>
+              <span class="case-link" @click="showCase(item)">{{ lang === "zh" ? "查看" : "View" }}</span>
             </div>
           </div>
         </div>
-        <!-- 空白补齐 -->
-        <div
-          v-for="n in Math.max(16 - pagedCases.length, 0)"
-          :key="'empty'+n"
-          class="case-card-new empty-card"
-        ></div>
+        <div v-for="n in Math.max(pageSize - cases.length, 0)" :key="'empty' + n" class="case-card-new empty-card"></div>
       </div>
       <div class="history-pagination">
-        <el-pagination
-          :page-size="16"
-          :pager-count="11"
-          layout="prev, pager, next"
-          :total="filteredCases.length"
-          v-model:current-page="page"
-        />
+        <el-pagination :page-size="pageSize" :pager-count="11" layout="prev, pager, next" :total="totalCasesCount" v-model:current-page="page" />
       </div>
     </div>
-    <!-- 弹窗 -->
-    <el-dialog
-      v-model="dialogVisible"
-      :title="dialogCase?.title"
-      width="800px"
-      top="60px"
-      :close-on-click-modal="false"
-    >
+    <el-dialog v-model="dialogVisible" :title="dialogCase?.title" width="800px" top="60px" :close-on-click-modal="false">
       <div v-html="caseDetailHtml"></div>
     </el-dialog>
   </div>
 </template>
 
 <script>
-import { ref, computed } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 import { useStore } from "vuex";
 import MarkdownIt from "markdown-it";
+// 导入您的API模块，根据您的实际路径修改
+import api from "@/api"; // 假设您的api模块在 src/api/index.js
 
 export default {
   name: "HistoryCases",
@@ -107,7 +80,6 @@ export default {
     const store = useStore();
     const lang = computed(() => store.getters.lang);
 
-    // 只保留中美日韩
     const countryOptions = [
       { value: "china", label: "中国", enLabel: "China" },
       { value: "usa", label: "美国", enLabel: "USA" },
@@ -115,28 +87,12 @@ export default {
       { value: "korea", label: "韩国", enLabel: "Korea" },
     ];
 
-    // 判决时间选项
-    // const timeOptions = [
-    //   { value: "", label_zh: "全部", label_en: "All" },
-    //   { value: "1", label_zh: "最近一年", label_en: "Last 1 year" },
-    //   { value: "3", label_zh: "最近三年", label_en: "Last 3 years" },
-    //   { value: "5", label_zh: "最近五年", label_en: "Last 5 years" },
-    //   { value: "10", label_zh: "最近十年", label_en: "Last 10 years" },
-    // ];
-
-    // 示例数据（只保留中美日韩）
-    const cases = ref(Array.from({ length: 30 }).map((_, i) => {
-      const countryArr = ["china", "usa", "japan", "korea"];
-      const countryIdx = i % countryArr.length;
-      return {
-        id: i + 1,
-        title: `案例${i + 1}`,
-        country: countryArr[countryIdx],
-        court: ["北京市中级法院", "纽约地方法院", "东京地方法院", "首尔法院"][countryIdx],
-        date: `202${4 - (i % 4)}.${(i % 12) + 1}.${(i % 28) + 1}`,
-        tags: ["合同纠纷", "侵权", "劳动争议", "交通事故"][countryIdx],
-      };
-    }));
+    // 存储从后端获取的案件数据
+    const cases = ref([]);
+    // 总案件数，用于分页组件
+    const totalCasesCount = ref(0);
+    // 加载状态
+    const loading = ref(false);
 
     // 过滤器
     const filterCountry = ref("");
@@ -145,48 +101,132 @@ export default {
 
     // 分页
     const page = ref(1);
-    const filteredCases = computed(() => {
-      return cases.value.filter(item => {
-        // 国家
-        const matchCountry = filterCountry.value ? item.country === filterCountry.value : true;
-        // 判决时间
-        let matchTime = true;
-        if (filterTime.value) {
-          const year = parseInt(item.date.split(".")[0]);
-          const nowYear = new Date().getFullYear();
-          matchTime = nowYear - year < parseInt(filterTime.value);
-        }
-        return matchCountry && matchTime;
-      });
-    });
-    const pagedCases = computed(() =>
-      filteredCases.value.slice((page.value - 1) * 16, page.value * 16)
-    );
+    // 根据您的要求，pageSize 固定为 16
+    const pageSize = ref(16);
 
     // 弹窗相关
     const dialogVisible = ref(false);
     const dialogCase = ref(null);
     const md = new MarkdownIt();
     const caseDetailHtml = ref("");
+    const detailLoading = ref(false);
+    /**
+     * 获取历史案件数据
+     */
+    const fetchHistoryCases = async () => {
+      loading.value = true; // 设置加载状态为 true
+      try {
+        const userId = localStorage.getItem("userId"); // 从localStorage获取userId
+        if (!userId) {
+          console.warn("User ID not found in localStorage. Cannot fetch history cases.");
+          cases.value = [];
+          totalCasesCount.value = 0;
+          // 可以考虑给用户一个提示
+          // alert(lang.value === 'zh' ? '请先登录以查看历史记录。' : 'Please log in to view history records.');
+          return;
+        }
 
-    function showCase(item) {
+        const params = {
+          userId: userId, // 用户ID
+          language: lang.value, // 语言
+          country: filterCountry.value, // 国家
+          period: filterTime.value ? parseInt(filterTime.value) : undefined, // 判决时间，转换为整数
+          pagenum: page.value, // 当前页码
+          pagesize: pageSize.value, // 每页大小 (已更新为 16)
+        };
+
+        console.log("Fetching history cases with params:", params);
+        const response = await api.getHistoryCases(params); // 调用API
+
+        if (response.code === 200 && response.data) {
+          cases.value = response.data.cases || [];
+          totalCasesCount.value = response.data.totalCount || 0;
+        } else {
+          // 处理API返回的错误
+          const errorMessage = response.message || (lang.value === "zh" ? "获取历史记录失败" : "Failed to fetch history records");
+          console.error("API Error:", errorMessage);
+          cases.value = [];
+          totalCasesCount.value = 0;
+        }
+      } catch (error) {
+        console.error("Error fetching history cases:", error);
+        cases.value = [];
+        totalCasesCount.value = 0;
+        // alert(errorMessage);
+      } finally {
+        loading.value = false; // 无论成功或失败，最后都要将加载状态设置为 false
+      }
+    };
+
+    const showCase = async (item) => {
       dialogCase.value = item;
-      caseDetailHtml.value = md.render(`
-### 智能案件分析
+      dialogVisible.value = true; // 先打开弹窗，显示加载状态
+      caseDetailHtml.value = lang.value === "zh" ? "加载案件详情中..." : "Loading case details..."; // 设置加载提示
+      detailLoading.value = true; // 设置详情加载状态
 
-**案件名称：** ${item.title}
+      try {
+        // 调用API获取案件的详细分析内容
+        const params = {
+          caseId: item.id, // 使用 item.id 作为案件的唯一标识符，因为它在你的 mockData 中是唯一的
+          language: lang.value, // 语言
+        };
+        const detailResponse = await api.getCaseSummary(params); // 假设API通过caseId获取详情
 
-**国家：** ${item.country}  
-**法院：** ${item.court}  
-**日期：** ${item.date}  
-**标签：** ${item.tags}
+        if (detailResponse && detailResponse.code === 200 && detailResponse.data) {
+          const detailedContent = detailResponse.data.content;
+
+          // 根据当前语言获取国家名
+          const displayCountry = (countryOptions.find((opt) => opt.value === item.country) || {})[lang.value === "zh" ? "label" : "enLabel"] || item.country;
+
+          // 构建弹窗内容，所有静态字符串都根据 lang.value 动态选择
+          caseDetailHtml.value = md.render(`
+### ${lang.value === "zh" ? "智能案件分析" : "Intelligent Case Analysis"}
+
+**${lang.value === "zh" ? "案件名称：" : "Case Name:"}** ${item.title}
+
+**${lang.value === "zh" ? "国家：" : "Country:"}** ${displayCountry}
+**${lang.value === "zh" ? "法院：" : "Court:"}** ${item.court}
+**${lang.value === "zh" ? "日期：" : "Date:"}** ${item.date}
+**${lang.value === "zh" ? "标签：" : "Tags:"}** ${item.tags}
 
 ---
 
-这里展示智能案件分析内容，可根据实际需求替换为真实分析结果。
+${detailedContent || (lang.value === "zh" ? "未找到详细分析内容。" : "No detailed analysis content found.")}
       `);
-      dialogVisible.value = true;
-    }
+        } else {
+          // 处理详情API返回的错误
+          const errorMessage = detailResponse && detailResponse.message ? detailResponse.message : lang.value === "zh" ? "获取案件详情失败" : "Failed to fetch case details";
+          caseDetailHtml.value = `<p style="color: red;">${errorMessage}</p>`;
+          console.error("Case Detail API Error:", errorMessage);
+        }
+      } catch (error) {
+        console.error("Error fetching case detail:", error);
+        caseDetailHtml.value = `<p style="color: red;">${lang.value === "zh" ? "加载案件详情时发生网络错误。" : "Network error occurred while loading case details."}</p>`;
+      } finally {
+        detailLoading.value = false; // 详情加载完成
+      }
+    };
+
+    // 监听过滤条件和页码的变化，自动重新获取数据
+    watch(
+      [page, filterCountry, filterTime, lang],
+      () => {
+        // 当筛选条件或语言变化时，重置页码到第一页
+        // 但对于单纯的页码变化，不重置页码
+        // 这里的逻辑可以根据实际需求调整，例如：
+        // 如果 filterCountry.value 或 filterTime.value 变化，则 page.value = 1;
+        // 为了简洁，这里统一触发 fetchHistoryCases
+        fetchHistoryCases();
+      },
+      { immediate: true }
+    ); // immediate: true 使得组件初次加载时也会立即执行一次 fetchHistoryCases
+
+    // 组件挂载时获取数据
+    onMounted(() => {
+      // 初始加载由 watch 的 immediate 属性处理
+      // 确保 localStorage 中有 userId，如果没有，需要引导用户登录
+      fetchHistoryCases();
+    });
 
     return {
       lang,
@@ -195,8 +235,10 @@ export default {
       filterTime,
       countryOptions,
       page,
-      filteredCases,
-      pagedCases,
+      pageSize, // 暴露 pageSize 给模板
+      cases, // 现在直接用 cases
+      totalCasesCount, // 暴露 totalCasesCount 给分页组件
+      loading, // 暴露 loading 状态
       dialogVisible,
       dialogCase,
       caseDetailHtml,
@@ -207,6 +249,7 @@ export default {
 </script>
 
 <style scoped>
+/* 样式保持不变 */
 .history-container {
   position: relative;
   width: 100%;
@@ -223,7 +266,7 @@ export default {
   left: 46px;
   font-size: 18px;
   font-weight: bold;
-  color: #409EFF;
+  color: #409eff;
   z-index: 20;
   letter-spacing: 2px;
   user-select: none;
@@ -252,12 +295,12 @@ export default {
   right: 184px;
   width: 32px;
   height: 32px;
-  background: #409EFF;
+  background: #409eff;
   color: white;
   border: 1px solid #eee;
   border-radius: 50%;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(205,208,214,0.12);
+  box-shadow: 0 2px 8px rgba(205, 208, 214, 0.12);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -400,9 +443,19 @@ export default {
   justify-content: flex-start;
   align-items: center;
   margin: 20px 0 0 0; /* 让分页栏紧贴卡片区 */
-  
+
   background: #fff;
   flex-shrink: 0;
   padding-left: 24px;
+}
+
+/* 加载和空状态消息样式 */
+.loading-message,
+.no-cases-message {
+  width: 100%;
+  text-align: center;
+  padding: 50px;
+  font-size: 16px;
+  color: #666;
 }
 </style>

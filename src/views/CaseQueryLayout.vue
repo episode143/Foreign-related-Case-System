@@ -44,7 +44,7 @@
           </div>
           <div class="header-actions">
             <el-switch
-              v-model="lang"
+              v-model="switchLang" 
               :active-value="'en'"
               :inactive-value="'zh'"
               active-text="EN"
@@ -99,17 +99,20 @@ export default {
     const store = useStore();
 
     // =============================
-    // ✅ 计算属性
+    // ✅ 计算属性 (lang 依然是只读的，它仅用于显示文本)
     // =============================
     const lang = computed(() => store.getters.lang);
+
+    const switchLang = ref(store.getters.lang); 
+
+    watch(lang, (newLang) => {
+      switchLang.value = newLang;
+    }, { immediate: true }); // immediate: true 确保组件挂载时立即执行一次，设置初始值
 
     // =============================
     // ✅ 初始化方法
     // =============================
     const initApp = () => {
-      const currentLang = localStorage.getItem("lang") || "zh";
-      store.commit("setLang", currentLang);
-
       userEmail.value = sessionStorage.getItem("userEmail") || "";
       activeMenu.value = pathToMenu(route.path);
     };
@@ -138,7 +141,7 @@ export default {
     // ✅ 语言切换逻辑
     // =============================
     const changeLang = (val) => {
-      store.commit("setLang", val);
+      store.commit("setLang", val); // 将新的语言值提交到 Vuex store
     };
 
     // =============================
@@ -173,7 +176,8 @@ export default {
     // =============================
     return {
       collapsed,
-      lang,
+      lang,         // lang 仍然暴露给模板，用于显示文本（例如菜单项的文本），因为它仍然是一个有用的只读值。
+      switchLang,   // 新增：暴露给 el-switch 的 v-model。
       activeMenu,
       changeLang,
       userEmail,
@@ -239,6 +243,7 @@ export default {
   min-height: calc(100vh - 64px);
   padding: 0;
 }
+/* 这里保留了 ::v-deep，但 Vue 3 推荐使用 :deep() 伪类选择器，你可以考虑更新 */
 ::v-deep .el-menu-item {
   border-radius: 10px;
   overflow: hidden;
