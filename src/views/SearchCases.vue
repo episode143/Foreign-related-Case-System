@@ -1,37 +1,33 @@
 <template>
   <div class="search-grid-container">
-    <!-- 左侧折叠筛选框 -->
     <div :class="['left-panel', { collapsed: isCollapsed }]">
       <button class="collapse-btn" :class="{ collapsed: isCollapsed }" @click="isCollapsed = !isCollapsed">
         <span v-if="isCollapsed">⮞</span>
         <span v-else>⮜</span>
       </button>
       <div v-show="!isCollapsed" class="panel-content">
-        <h3 style="margin-bottom:18px;">{{ lang === 'zh' ? '筛选' : 'Filter' }}</h3>
+        <h3 style="margin-bottom: 18px">{{ lang === "zh" ? "筛选" : "Filter" }}</h3>
         <div class="filter-group">
-          <!-- 国家 -->
-          <div class="filter-label">{{ lang === 'zh' ? '国家' : 'Country' }}</div>
+          <div class="filter-label">{{ lang === "zh" ? "国家" : "Country" }}</div>
           <select v-model="filterCountry" class="filter-select">
-            <option value="">{{ lang === 'zh' ? '全部' : 'All' }}</option>
+            <option value="">{{ lang === "zh" ? "全部" : "All" }}</option>
             <option v-for="item in countryOptions" :key="item.value" :value="item.value">
-              {{ lang === 'zh' ? item.label : item.enLabel }}
+              {{ lang === "zh" ? item.label : item.enLabel }}
             </option>
           </select>
         </div>
-        <!-- 判决时间 -->
         <div class="filter-group">
-          <div class="filter-label">{{ lang === 'zh' ? '判决时间' : 'Judgment Time' }}</div>
+          <div class="filter-label">{{ lang === "zh" ? "判决时间" : "Judgment Time" }}</div>
           <select v-model="filterTime" class="filter-select">
-            <option value="">{{ lang === 'zh' ? '全部' : 'All' }}</option>
-            <option value="1">{{ lang === 'zh' ? '最近一年' : 'Last 1 year' }}</option>
-            <option value="3">{{ lang === 'zh' ? '最近三年' : 'Last 3 years' }}</option>
-            <option value="5">{{ lang === 'zh' ? '最近五年' : 'Last 5 years' }}</option>
-            <option value="10">{{ lang === 'zh' ? '最近十年' : 'Last 10 years' }}</option>
+            <option value="">{{ lang === "zh" ? "全部" : "All" }}</option>
+            <option value="1">{{ lang === "zh" ? "最近一年" : "Last 1 year" }}</option>
+            <option value="3">{{ lang === "zh" ? "最近三年" : "Last 3 years" }}</option>
+            <option value="5">{{ lang === "zh" ? "最近五年" : "Last 5 years" }}</option>
+            <option value="10">{{ lang === "zh" ? "最近十年" : "Last 10 years" }}</option>
           </select>
         </div>
       </div>
     </div>
-    <!-- 原有内容 -->
     <div style="grid-area: input-area; background-color: transparent">
       <div style="width: 100%; height: 85%; background-color: white; border-radius: 15px; border: 1px solid rgb(221.7, 222.6, 224.4); position: relative">
         <button
@@ -40,7 +36,7 @@
             right: 6px;
             bottom: 5px;
             z-index: 10;
-            background-color: #409EFF;
+            background-color: #409eff;
             border: none;
             border-radius: 50%;
             width: 30px;
@@ -49,45 +45,47 @@
             justify-content: center;
             align-items: center;
           "
+          @click="performSearch"
         >
           <i class="iconfont icon-sousuo" style="font-size: 20px; color: white"></i>
         </button>
         <el-input
           class="no-border-textarea"
-          v-model="textarea"
+          v-model="searchText"
           style="padding-top: 12px; width: 100%"
           :autosize="{ minRows: 2, maxRows: 2 }"
           type="textarea"
           :placeholder="lang === 'zh' ? '请输入您想查询案件的关键字' : 'Please enter the keywords of the case you want to query'"
+          @keyup.enter="performSearch"
         />
       </div>
     </div>
     <div class="case-list-area">
       <el-scrollbar style="width: 100%; height: 480px">
         <div class="case-list-flex">
-          <div v-for="(item, index) in pagedCases" :key="item.id" class="case-card-new" @click="selectIndex = (page - 1) * 6 + index">
+          <div v-for="(item, index) in cases" :key="item.id" class="case-card-new" @click="selectCase(index)">
             <div class="case-card-content">
               <div class="case-card-header">
-                <span class="case-title">{{ item.title }}</span>
+                <span class="case-title">{{ item.case_name }}</span>
                 <i
                   class="iconfont icon-shoucang_shixin"
                   :style="{
                     marginLeft: 'auto',
                     fontSize: '20px',
-                    color: item.favorite ? '#409EFF' : 'rgb(199.5, 201, 204)',
-                    cursor: 'pointer'
+                    color: item.isfavored ? '#409EFF' : 'rgb(199.5, 201, 204)',
+                    cursor: 'pointer',
                   }"
-                  @click.stop="item.favorite = !item.favorite"
+                  @click.stop="toggleFavorite(item)"
                   title="收藏"
                 ></i>
               </div>
               <div class="case-card-row">
                 <span class="case-country">{{ item.country }}</span>
                 <span class="case-court">{{ item.court }}</span>
-                <span class="case-date">{{ item.date }}</span>
+                <span class="case-date">{{ item.judgement_date }}</span>
               </div>
               <div class="case-card-row">
-                <span class="case-tags">{{lang === "zh" ? "标签" : "Tags"}}：{{ item.tags }}</span>
+                <span class="case-tags">{{ lang === "zh" ? "标签" : "Tags" }}：{{ item.tags }}</span>
                 <a href="#" class="case-link">{{ lang === "zh" ? "查看" : "View" }}</a>
               </div>
             </div>
@@ -95,12 +93,11 @@
         </div>
       </el-scrollbar>
       <div style="padding: 8px 0; display: flex; justify-content: center; width: 100%">
-        <el-pagination size="small" layout="prev, pager, next" :total="cases.length" :page-size="6" v-model:current-page="page" />
+        <el-pagination size="small" layout="prev, pager, next" :total="totalCasesCount" :page-size="searchParams.pagesize" v-model:current-page="page" />
       </div>
     </div>
 
-    <div style="grid-area: case-content-area;background-color: transparent;">
-      <!-- 顶部栏 -->
+    <div style="grid-area: case-content-area; background-color: transparent">
       <div
         style="
           border-top-left-radius: 10px;
@@ -115,25 +112,17 @@
           padding: 0 24px;
         "
       >
-        <span style="font-weight: 600; font-size: 16px; color: #409eff;">
+        <span style="font-weight: 600; font-size: 16px; color: #409eff">
           {{ lang === "zh" ? "智能案件分析 :" : "Case Analysis :" }}
         </span>
-        <span style="font-weight: 600; font-size: 16px; color: #333; margin-left: 10px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-          {{ cases[selectIndex].title }}
+        <span style="font-weight: 600; font-size: 16px; color: #333; margin-left: 10px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">
+          {{ cases[selectIndex]?.case_name || "" }}
         </span>
-        <span
-          style="font-weight: 600; font-size: 16px; color: #909399; cursor: pointer; margin-left: 24px;"
-          @click="openOriginUrl"
-        >
+        <span style="font-weight: 600; font-size: 16px; color: #909399; cursor: pointer; margin-left: 24px" @click="openOriginUrl">
           {{ lang === "zh" ? "查看原始判决文书" : "View Original Judgment" }}
         </span>
-        <i
-          class="iconfont icon-xiazai"
-          style="font-size: 16px; margin-left: 16px; color: rgb(121.3, 187.1, 255); cursor: pointer;"
-          @click="downloadWord"
-        ></i>
+        <i class="iconfont icon-xiazai" style="font-size: 16px; margin-left: 16px; color: rgb(121.3, 187.1, 255); cursor: pointer" @click="downloadWord"></i>
       </div>
-      <!-- 内容区 -->
       <div
         style="
           width: 100%;
@@ -155,25 +144,46 @@
 </template>
 
 <script>
-import { ref, computed } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 import { useStore } from "vuex";
 import MarkdownIt from "markdown-it";
 import HtmlDocx from "html-docx-js/dist/html-docx";
 import { saveAs } from "file-saver";
+import api from "../api/index"; // 确保正确导入你的 API 模块
 
 export default {
   name: "SearchCases",
   setup() {
     const store = useStore();
     const lang = computed(() => store.getters.lang);
+    const searchParams = computed(() => store.getters.searchParams); // 获取 Vuex 中的 searchParams
 
     // 筛选相关
     const isCollapsed = ref(true);
-    const filterCountry = ref("");
-    const filterTypes = ref([]);
-    const filterTime = ref("");
+
+    // 绑定到 Vuex 的 computed 属性
+    const filterCountry = computed({
+      get: () => searchParams.value.country,
+      set: (value) => {
+        store.commit("setSearchCountry", value);
+        // 筛选条件变化时，通常会重置页码并重新搜索
+        store.commit("setSearchPagenum", 1);
+        performSearch();
+      },
+    });
+
+    const filterTime = computed({
+      get: () => searchParams.value.period,
+      set: (value) => {
+        store.commit("setSearchPeriod", value);
+        // 筛选条件变化时，通常会重置页码并重新搜索
+        store.commit("setSearchPagenum", 1);
+        performSearch();
+      },
+    });
 
     const countryOptions = [
+      { value: "", label: "全部", enLabel: "All" },
       { value: "china", label: "中国", enLabel: "China" },
       { value: "usa", label: "美国", enLabel: "USA" },
       { value: "uk", label: "英国", enLabel: "UK" },
@@ -183,155 +193,181 @@ export default {
       { value: "russia", label: "俄罗斯", enLabel: "Russia" },
       { value: "germany", label: "德国", enLabel: "Germany" },
     ];
-    const typeOptions = [
-      { value: "theft", label: "盗窃", enLabel: "Theft" },
-      { value: "fraud", label: "诈骗", enLabel: "Fraud" },
-      { value: "intentional_injury", label: "故意伤害", enLabel: "Intentional Injury" },
-      { value: "traffic_accident", label: "交通肇事", enLabel: "Traffic Accident" },
-      { value: "contract_dispute", label: "合同纠纷", enLabel: "Contract Dispute" },
-      { value: "labor_dispute", label: "劳动争议", enLabel: "Labor Dispute" },
-      { value: "divorce", label: "离婚案", enLabel: "Divorce" },
-      { value: "property_damage", label: "财产损害赔偿纠纷", enLabel: "Property Damage" },
-      { value: "house_sale", label: "房屋买卖合同纠纷", enLabel: "House Sale Dispute" },
-      { value: "tort_liability", label: "侵权责任纠纷", enLabel: "Tort Liability" },
-      { value: "medical_accident", label: "医疗事故纠纷", enLabel: "Medical Accident" },
-      { value: "ip_dispute", label: "知识产权纠纷", enLabel: "IP Dispute" },
-      { value: "admin_penalty", label: "行政处罚纠纷", enLabel: "Admin Penalty" },
-      { value: "land_expropriation", label: "土地征收补偿争议", enLabel: "Land Expropriation" },
-      { value: "admin_license", label: "行政许可争议", enLabel: "Admin License" },
-      { value: "other", label: "其它类型", enLabel: "Other" },
-    ];
 
-    // 案例数据（注意country字段用value）
-    const cases = ref([
-      {
-        id: 1,
-        title: "多诺霍诉史蒂文森案",
-        country: "usa",
-        court: "沃兹吉边德法院",
-        date: "2025.1.1",
-        tags: "财务纠纷、故意伤人",
-        favorite: false,
-      },
-      {
-        id: 2,
-        title: "张华诉星辰公寓案",
-        country: "china",
-        court: "北京市中级法院",
-        date: "2024.12.1",
-        tags: "合同纠纷",
-        favorite: false,
-      },
-      {
-        id: 3,
-        title: "丽诉味来食品公司案",
-        country: "uk",
-        court: "伦敦高等法院",
-        date: "2024.11.1",
-        tags: "侵权",
-        favorite: false,
-      },
-      {
-        id: 4,
-        title: "彼得森诉数智互联案",
-        country: "france",
-        court: "巴黎地方法院",
-        date: "2024.10.1",
-        tags: "知识产权",
-        favorite: false,
-      },
-      {
-        id: 5,
-        title: "劳埃德劳动纠纷案",
-        country: "germany",
-        court: "柏林法院",
-        date: "2024.9.1",
-        tags: "劳动争议",
-        favorite: false,
-      },
-      {
-        id: 6,
-        title: "东京地铁连环事故案",
-        country: "japan",
-        court: "东京地方法院",
-        date: "2024.8.1",
-        tags: "交通事故",
-        favorite: false,
-      },
-      {
-        id: 7,
-        title: "案例7",
-        country: "korea",
-        court: "首尔法院",
-        date: "2024.7.1",
-        tags: "医疗纠纷",
-        favorite: false,
-      },
-    ]);
+    // 案例数据：此数组将只包含当前页的案例
+    const cases = ref([]);
+    const totalCasesCount = ref(0); // 用于分页的总数
+    const caseDetailContent = ref("暂无详细内容。"); // 用于存储 AI 分析结果
 
     // 分页
-    const page = ref(1);
-    const pagedCases = computed(() => {
-      // 先筛选
-      let filtered = cases.value.filter(item => {
-        // 国家
-        const inCountry = filterCountry.value ? item.country === filterCountry.value : true;
-        // 多选类型
-        const inType = filterTypes.value.length > 0 ? filterTypes.value.includes(item.tags) : true;
-        // 判决时间
-        let inTime = true;
-        if (filterTime.value) {
-          const year = parseInt(item.date.split(".")[0]);
-          const nowYear = new Date().getFullYear();
-          inTime = nowYear - year < parseInt(filterTime.value);
-        }
-        return inCountry && inType && inTime;
-      });
-      // 分页
-      const start = (page.value - 1) * 6;
-      return filtered.slice(start, start + 6);
+    const page = computed({
+      get: () => searchParams.value.pagenum,
+      set: (value) => {
+        store.commit("setSearchPagenum", value);
+        performSearch(); // 页码变化触发搜索
+      },
     });
 
-    // 其它功能
-    const textarea = ref("");
-    const selectIndex = ref(0);
+    // 搜索输入框绑定到 Vuex 的 computed 属性
+    const searchText = computed({
+      get: () => searchParams.value.keyword,
+      set: (value) => {
+        store.commit("setSearchKeyword", value);
+      },
+    });
+
+    // 搜索方法，触发数据获取
+    const performSearch = async () => {
+      try {
+        // 更新 Vuex 中的搜索参数，确保页码也被设置
+        store.commit("setSearchParams", {
+          keyword: searchText.value,
+          country: filterCountry.value,
+          period: filterTime.value,
+          pagenum: page.value, // 使用当前页码
+          pagesize: searchParams.value.pagesize, // 保持pagesize不变
+        });
+
+        const response = await api.searchCases(searchParams.value);
+        console.log("搜索参数", searchParams.value);
+        // 假设 API 返回的数据结构中有 cases 数组，并且每个 case 对象有一个 isfavored 属性
+        // 如果后端不返回 isfavored，你可能需要在这里手动添加或处理
+        cases.value = response.data.cases || [];
+        console.log("搜索结果", cases.value);
+        totalCasesCount.value = response.data.totalCount || 0; // 假设 API 返回的总数
+
+        // 搜索完成后，默认选中第一个案例并获取其摘要
+        if (cases.value.length > 0) {
+          selectIndex.value = 0;
+          getCaseSummary(); // 立即获取第一个案例的摘要
+        } else {
+          selectIndex.value = -1;
+          caseDetailContent.value = "暂无详细内容。"; // 清空详情内容
+        }
+      } catch (error) {
+        console.error("搜索失败:", error);
+        cases.value = []; // 如果发生错误，清空当前页数据
+        totalCasesCount.value = 0; // 重置总数
+        caseDetailContent.value = "获取案件列表失败。";
+      }
+    };
+
+    // 获取 AI 分析结果
+    const getCaseSummary = async () => {
+      if (selectIndex.value === -1 || !cases.value[selectIndex.value]) {
+        caseDetailContent.value = "暂无详细内容。";
+        return;
+      }
+      try {
+        const params = {
+          caseId: cases.value[selectIndex.value].case_id,
+          language: lang.value,
+        };
+        console.log("获取 AI 分析结果的参数", params);
+        const response = await api.getCaseSummary(params);
+        console.log("AI分析结果", response);
+        caseDetailContent.value = response.data.content || "未获取到 AI 分析结果。";
+      } catch (error) {
+        console.error("获取AI分析结果失败:", error);
+        caseDetailContent.value = "获取 AI 分析结果失败。";
+      }
+    };
+
+    // **新增：收藏/取消收藏案件方法**
+    const toggleFavorite = async (item) => {
+      const params = {
+        caseId: item.case_id,
+        userId: localStorage.getItem("userId"),
+      };
+      console.log("收藏/取消收藏案件的参数", params);
+      try {
+        if (item.isfavored) {
+          // 当前已收藏，点击则取消收藏
+          item.isfavored = false;
+          await api.cancelFavoriteCase(params);
+          console.log(`案件 ${item.case_name} (ID: ${item.case_id}) 已取消收藏`);
+        } else {
+          // 当前未收藏，点击则收藏
+          item.isfavored = true; // 更新前端状态
+          await api.favoriteCase(params);
+          console.log(`案件 ${item.case_name} (ID: ${item.case_id}) 已收藏`);
+        }
+        // 可选：在这里添加一个成功的提示消息，例如：
+        // this.$message.success(lang.value === 'zh' ? '操作成功！' : 'Operation successful!');
+      } catch (error) {
+        console.error("收藏/取消收藏操作失败:", error);
+        // 可选：在这里添加一个失败的提示消息，例如：
+        // this.$message.error(lang.value === 'zh' ? '操作失败，请稍后再试。' : 'Operation failed, please try again later.');
+      }
+    };
+
+    // 初始加载数据 (页面首次加载时执行搜索)
+    onMounted(() => {
+      performSearch();
+    });
+
+    const selectIndex = ref(0); // 默认选中第一个案例在当前页的索引
+
+    // 处理案件卡片点击事件
+    const selectCase = (index) => {
+      selectIndex.value = index;
+    };
+
+    // 监听 selectIndex 变化，当选中的案例改变时，重新获取 AI 摘要
+    watch(selectIndex, (newIndex) => {
+      if (newIndex !== -1 && cases.value[newIndex]) {
+        getCaseSummary();
+      } else {
+        caseDetailContent.value = "暂无详细内容。";
+      }
+    });
+
+    // 监听 cases 变化，如果当前 selectIndex 超出范围，则重置为0并尝试获取摘要
+    watch(
+      cases,
+      (newCases) => {
+        if (!newCases || newCases.length === 0) {
+          selectIndex.value = -1; // 如果没有案例，则重置为-1 (表示没有选中)
+          caseDetailContent.value = "暂无详细内容。";
+        } else if (selectIndex.value >= newCases.length || selectIndex.value === -1) {
+          selectIndex.value = 0; // 如果当前索引超出新数据范围或未选中，则默认选中第一个
+        }
+        // 注意：这里不需要手动调用 getCaseSummary()，因为 selectIndex 的 watch 会触发
+      },
+      { immediate: true }
+    ); // 立即执行一次，确保初始状态正确
+
     const caseOriginUrl = ref("https://www.courtlistener.com/opinion/4328762/mike-macmann-v-mike-matthes/?q=mike");
-    const caseDetailMarkdown = ref(`### 法律案件解释：多诺霍诉史蒂文森案 (Donoghue v Stevenson)
 
-这是一份案例解释——一个在普通法系国家（如英国、加拿大、澳大利亚等）具有里程碑意义的法律案件：多诺霍诉史蒂文森案（Donoghue v Stevenson [1932] AC 562），又被称为“蜗牛案”。这个案件确立了现代侵权法中最重要的原则之一——**疏忽侵权 (Negligence)** 的原则。
-
-#### 1. 案件名称
-多诺霍诉史蒂文森案 (Donoghue v Stevenson)，或称“蜗牛案”。
-案件编号: [1932] AC 562
-
-#### 2. 案件背景/事实 (Background/Facts)
-1932年，一位名叫梅多诺霍（May Donoghue）的女士和朋友在苏格兰佩斯利的一家咖啡馆喝饮料，她的朋友为她点了一杯由生产商史蒂文森（Stevenson）公司生产的姜汁啤酒。当多诺霍女士喝到一半时，她发现瓶子里有一只已经腐烂的蜗牛尸体。
-
-看到蜗牛后，多诺霍女士受到了惊吓，并大病和因此上了胃肠炎和严重的精神打击。由于姜汁啤酒是朋友购买的，多诺霍女士与咖啡馆老板仅仅没有直接合同关系，普通法的传统，并没有合同关系就不能索赔。因此，多诺霍女士决定直接起诉案件中啤酒的生产商史蒂文森公司，理由是其疏忽（negligence）。她的律师，史蒂文森公司在生产过程中未能采取相应注意，导致蜗牛进入了瓶子，并对消费者造成了伤害。
-
-#### 3. 法律争议焦点 (Legal Issue)
-本案的核心法律争议是：
-
-**在没有直接合同关系的前提下，产品制造商对最终消费者是否负有避免疏忽行为的法律责任？**
-（即：是否在一个制造商对其产品最终使用者负有的“注意义务”（Duty of Care），即使两者之间没有合同关系？）
-
-#### 4. 法院判决 (Court Decision)
-英国上议院（House of Lords），于1932年做出了具有深远影响力的判决。上议院认为买卖双方的契约关系的狭义观点被突破，多诺霍女士
-    `);
     const md = new MarkdownIt();
-    const caseDetailHtml = computed(() => md.render(caseDetailMarkdown.value));
+    // 根据 AI 分析结果显示其详情
+    const caseDetailHtml = computed(() => md.render(caseDetailContent.value));
+
     const downloadWord = () => {
+      const selectedCase = cases.value[selectIndex.value];
+      if (!selectedCase) {
+        console.warn("未选择任何案例，无法下载。");
+        alert(lang.value === "zh" ? "请先选择一个案件再下载。" : "Please select a case to download.");
+        return;
+      }
       const html = `
         <html>
           <head><meta charset="utf-8"/></head>
           <body>
+            <h1>${selectedCase.case_name || "案件详情"}</h1>
+            <p><strong>国家:</strong> ${selectedCase.country}</p>
+            <p><strong>法院:</strong> ${selectedCase.court}</p>
+            <p><strong>日期:</strong> ${selectedCase.judgement_date}</p>
+            <p><strong>标签:</strong> ${selectedCase.tags}</p>
+            <hr/>
             ${caseDetailHtml.value}
           </body>
         </html>
       `;
       const blob = HtmlDocx.asBlob(html);
-      saveAs(blob, `${cases.value[selectIndex.value].title || "案件详情"}.docx`);
+      saveAs(blob, `${selectedCase.case_name || "案件详情"}.docx`);
     };
+
     const openOriginUrl = () => {
       window.open(caseOriginUrl.value, "_blank");
     };
@@ -340,21 +376,23 @@ export default {
       lang,
       isCollapsed,
       filterCountry,
-      filterTypes,
       filterTime,
       countryOptions,
-      typeOptions,
-      cases,
-      page,
-      pagedCases,
-      textarea,
+      cases, // 现在 cases 存储的是当前页的数据
+      totalCasesCount, // 分页总数
+      page, // 页码，绑定到Vuex
+      searchText, // 搜索框内容，绑定到Vuex
       selectIndex,
+      selectCase, // 暴露 selectCase 方法
+      toggleFavorite, // **暴露 toggleFavorite 方法**
       caseOriginUrl,
       caseDetailHtml,
       downloadWord,
       openOriginUrl,
+      performSearch, // 添加搜索方法
+      searchParams, // 暴露 searchParams 以便在模板中使用 pageSize
     };
-  }
+  },
 };
 </script>
 
@@ -491,12 +529,12 @@ export default {
   right: -14px;
   width: 28px;
   height: 28px;
-  background: #409EFF;
+  background: #409eff;
   color: white;
   border: 1px solid #eee;
   border-radius: 50%;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(205,208,214,0.12);
+  box-shadow: 0 2px 8px rgba(205, 208, 214, 0.12);
   display: flex;
   align-items: center;
   justify-content: center;

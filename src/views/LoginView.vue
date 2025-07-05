@@ -152,10 +152,12 @@ export default {
           password: form.value.password
         };
         const response = await api.login(params);
-        if(response.success === true) {
+        if(response.code === 200) {
           ElMessage.success(text.value.loginSuccess);
           const username = response.data.username || " ";
+          const userId = response.data.userId || " ";
           localStorage.setItem('username', username);
+          localStorage.setItem('userId', userId);
           sessionStorage.setItem('userEmail', form.value.email);
           sessionStorage.setItem('token', true);
           router.push('/case-query')
@@ -184,7 +186,7 @@ export default {
           password: form.value.password
         };
         const response = await api.register(params);
-        if (response.success === true) {
+        if (response.code === 200) {
           ElMessage.success(text.value.regSuccess);
           form.value.email = '';
           form.value.password = '';
