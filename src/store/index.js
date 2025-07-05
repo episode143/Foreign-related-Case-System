@@ -7,11 +7,12 @@ export default createStore({
       keyword: '',   // 搜索关键字
       period: '',    // 时间范围
       country: '',   // 国家
+      // language: 'zh', // 移除此行，searchParams 中不再包含 language
     },
-    // 新增：收藏夹页面的搜索参数状态
+    // 收藏夹页面的搜索参数状态
     favoriteSearchParams: {
       pagenum: 1, // 收藏夹页码，默认为第一页
-      selectedIndex: -1, // 当前选中收藏案例的索引 (相对于当前页的 cases 数组)，默认为0
+      selectedIndex: -1, // 当前选中收藏案例的索引 (相对于当前页的 cases 数组)，默认为 -1 (表示未选中)
     }
   },
   getters: {
@@ -21,12 +22,14 @@ export default createStore({
   },
   mutations: {
     setLang(state, lang) {
-      state.lang = lang // 设置语言
-      state.searchParams.language = lang;
+      state.lang = lang; // 设置语言
+      // state.searchParams.language = lang; // 移除此行，不再同步到主搜索参数
     },
     setSearchParams(state, params) {
-      state.searchParams = { ...state.searchParams, ...params };
-      state.searchParams.language = state.lang;
+      // 合并传入的参数，但不包含 language 字段
+      const {  ...restParams } = params; // 解构出 language，避免其被合并
+      state.searchParams = { ...state.searchParams, ...restParams };
+      // state.searchParams.language = state.lang; // 移除此行
     },
     setSearchKeyword(state, keyword) {
       state.searchParams.keyword = keyword;
@@ -38,7 +41,7 @@ export default createStore({
       state.searchParams.country = country;
     },
 
-    // 新增：收藏夹页面的 mutations
+    // 收藏夹页面的 mutations
     setFavoriteSearchPagenum(state, pagenum) {
       state.favoriteSearchParams.pagenum = pagenum;
     },

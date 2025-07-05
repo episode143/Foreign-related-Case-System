@@ -32,37 +32,52 @@
       </div>
     </div>
     <div class="card-area" :class="{ expand: isCollapsed }">
-      <div v-if="loading" class="loading-message">
-        {{ lang === "zh" ? "加载中..." : "Loading..." }}
-      </div>
-      <div v-else-if="cases.length === 0 && !loading" class="no-cases-message">
-        {{ lang === "zh" ? "暂无历史记录。" : "No history records found." }}
-      </div>
-      <div v-else class="card-grid">
-        <div v-for="item in cases" :key="item.id" class="case-card-new">
-          <div class="case-card-content">
-            <div class="case-card-header">
-              <span class="case-title">{{ item.case_name }}</span>
-            </div>
-            <div class="case-card-row">
-              <span class="case-country"> {{ lang === "zh" ? "国家" : "Country" }}: {{ item.country }} </span>
-              <span class="case-court">{{ item.court }}</span>
-              <span class="case-date">{{ item.judgement_date }}</span>
-            </div>
-            <div class="case-card-row">
-              <span class="case-tags"> {{ lang === "zh" ? "标签" : "Tags" }}：{{ item.tags || "" }} </span>
-              <span class="case-link" @click="showCase(item)">{{ lang === "zh" ? "查看" : "View" }}</span>
+      <div
+        class="card-grid"
+        v-loading="loading"
+        element-loading-text="正在加载历史记录..."
+        element-loading-spinner="Loading"
+        element-loading-background="rgba(255, 255, 255, 0.8)"
+      >
+        <template v-if="!loading && cases.length === 0">
+          <div class="no-cases-message">
+            {{ lang === "zh" ? "暂无历史记录。" : "No history records found." }}
+          </div>
+        </template>
+        <template v-else>
+          <div v-for="item in cases" :key="item.id" class="case-card-new">
+            <div class="case-card-content">
+              <div class="case-card-header">
+                <span class="case-title">{{ item.case_name }}</span>
+              </div>
+              <div class="case-card-row">
+                <span class="case-country"> {{ lang === "zh" ? "国家" : "Country" }}: {{ item.country }} </span>
+                <span class="case-court">{{ item.court }}</span>
+                <span class="case-date">{{ item.judgement_date }}</span>
+              </div>
+              <div class="case-card-row">
+                <span class="case-tags"> {{ lang === "zh" ? "标签" : "Tags" }}：{{ item.tags || "" }} </span>
+                <span class="case-link" @click="showCase(item)">{{ lang === "zh" ? "查看" : "View" }}</span>
+              </div>
             </div>
           </div>
-        </div>
-        <div v-for="n in Math.max(pageSize - cases.length, 0)" :key="'empty' + n" class="case-card-new empty-card"></div>
+          <div v-for="n in Math.max(pageSize - cases.length, 0)" :key="'empty' + n" class="case-card-new empty-card"></div>
+        </template>
       </div>
       <div class="history-pagination">
         <el-pagination :page-size="pageSize" :pager-count="11" layout="prev, pager, next" :total="totalCasesCount" v-model:current-page="page" />
       </div>
     </div>
-    <el-dialog v-model="dialogVisible" :title="dialogCase?.title" width="800px" top="60px" :close-on-click-modal="false">
-      <div v-html="caseDetailHtml"></div>
+    <el-dialog v-model="dialogVisible" :title="dialogCase?.case_name" width="800px" top="60px" :close-on-click-modal="false">
+      <div
+        v-loading="detailLoading"
+        element-loading-text="正在加载案件详情..."
+        element-loading-spinner="Loading"
+        element-loading-background="rgba(255, 255, 255, 0.8)"
+        class="dialog-detail-content"
+      >
+        <div v-html="caseDetailHtml"></div>
+      </div>
     </el-dialog>
   </div>
 </template>
@@ -92,7 +107,7 @@ export default {
     // 总案件数，用于分页组件
     const totalCasesCount = ref(0);
     // 加载状态
-    const loading = ref(false);
+    const loading = ref(false); // 控制整个历史案件列表的加载状态
 
     // 过滤器
     const filterCountry = ref("");
@@ -109,7 +124,8 @@ export default {
     const dialogCase = ref(null);
     const md = new MarkdownIt();
     const caseDetailHtml = ref("");
-    const detailLoading = ref(false);
+    const detailLoading = ref(false); // 控制案件详情弹窗内容的加载状态
+
     /**
      * 获取历史案件数据
      */
@@ -121,8 +137,7 @@ export default {
           console.warn("User ID not found in localStorage. Cannot fetch history cases.");
           cases.value = [];
           totalCasesCount.value = 0;
-          // 可以考虑给用户一个提示
-          // alert(lang.value === 'zh' ? '请先登录以查看历史记录。' : 'Please log in to view history records.');
+          // 可以考虑给用户一个提示，但这里由模板中的 no-cases-message 处理
           return;
         }
 
@@ -152,7 +167,6 @@ export default {
         console.error("Error fetching history cases:", error);
         cases.value = [];
         totalCasesCount.value = 0;
-        // alert(errorMessage);
       } finally {
         loading.value = false; // 无论成功或失败，最后都要将加载状态设置为 false
       }
@@ -160,14 +174,14 @@ export default {
 
     const showCase = async (item) => {
       dialogCase.value = item;
-      dialogVisible.value = true; // 先打开弹窗，显示加载状态
+      dialogVisible.value = true; // 先打开弹窗，以便显示加载状态
       caseDetailHtml.value = lang.value === "zh" ? "加载案件详情中..." : "Loading case details..."; // 设置加载提示
-      detailLoading.value = true; // 设置详情加载状态
+      detailLoading.value = true; // 设置详情加载状态为 true
 
       try {
         // 调用API获取案件的详细分析内容
         const params = {
-          caseId: item.id, // 使用 item.id 作为案件的唯一标识符，因为它在你的 mockData 中是唯一的
+          caseId: item.case_id, // 使用 item.case_id 作为案件的唯一标识符，因为它在你的后端数据中是唯一的
           language: lang.value, // 语言
         };
         const detailResponse = await api.getCaseSummary(params); // 假设API通过caseId获取详情
@@ -182,17 +196,17 @@ export default {
           caseDetailHtml.value = md.render(`
 ### ${lang.value === "zh" ? "智能案件分析" : "Intelligent Case Analysis"}
 
-**${lang.value === "zh" ? "案件名称：" : "Case Name:"}** ${item.title}
+**${lang.value === "zh" ? "案件名称：" : "Case Name:"}** ${item.case_name}
 
 **${lang.value === "zh" ? "国家：" : "Country:"}** ${displayCountry}
 **${lang.value === "zh" ? "法院：" : "Court:"}** ${item.court}
-**${lang.value === "zh" ? "日期：" : "Date:"}** ${item.date}
+**${lang.value === "zh" ? "日期：" : "Date:"}** ${item.judgement_date}
 **${lang.value === "zh" ? "标签：" : "Tags:"}** ${item.tags}
 
 ---
 
 ${detailedContent || (lang.value === "zh" ? "未找到详细分析内容。" : "No detailed analysis content found.")}
-      `);
+          `);
         } else {
           // 处理详情API返回的错误
           const errorMessage = detailResponse && detailResponse.message ? detailResponse.message : lang.value === "zh" ? "获取案件详情失败" : "Failed to fetch case details";
@@ -214,12 +228,13 @@ ${detailedContent || (lang.value === "zh" ? "未找到详细分析内容。" : "
         // 当筛选条件或语言变化时，重置页码到第一页
         // 但对于单纯的页码变化，不重置页码
         // 这里的逻辑可以根据实际需求调整，例如：
-        // 如果 filterCountry.value 或 filterTime.value 变化，则 page.value = 1;
-        // 为了简洁，这里统一触发 fetchHistoryCases
+        // if (oldFilterCountry !== filterCountry.value || oldFilterTime !== filterTime.value || oldLang !== lang.value) {
+        //   page.value = 1;
+        // }
         fetchHistoryCases();
       },
-      { immediate: true }
-    ); // immediate: true 使得组件初次加载时也会立即执行一次 fetchHistoryCases
+      { immediate: true } // immediate: true 使得组件初次加载时也会立即执行一次 fetchHistoryCases
+    );
 
     // 组件挂载时获取数据
     onMounted(() => {
@@ -243,6 +258,7 @@ ${detailedContent || (lang.value === "zh" ? "未找到详细分析内容。" : "
       dialogCase,
       caseDetailHtml,
       showCase,
+      detailLoading, // 暴露 detailLoading 状态
     };
   },
 };
@@ -365,6 +381,10 @@ ${detailedContent || (lang.value === "zh" ? "未找到详细分析内容。" : "
   overflow: hidden;
   padding-left: 32px;
   padding-right: 32px;
+  position: relative; /* 为 v-loading 提供定位上下文 */
+  min-height: 400px; /* 确保在没有案件时也有足够的空间显示加载动画 */
+  justify-content: center; /* 水平居中内容 */
+  align-items: center; /* 垂直居中内容 */
 }
 .case-card-new {
   background: #f2f6fc;
@@ -457,5 +477,25 @@ ${detailedContent || (lang.value === "zh" ? "未找到详细分析内容。" : "
   padding: 50px;
   font-size: 16px;
   color: #666;
+  position: absolute; /* 使其能在 v-loading 覆盖下显示 */
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none; /* 确保不影响 v-loading 的点击事件 */
+}
+
+/* 确保加载文本不被截断或断行 */
+.card-grid :deep(.el-loading-text),
+.dialog-detail-content :deep(.el-loading-text) {
+  white-space: nowrap; /* 防止文本换行 */
+}
+
+/* 弹窗内容区域样式，提供定位上下文给v-loading */
+.dialog-detail-content {
+  position: relative;
+  min-height: 200px; /* 确保弹窗内容在加载时也有一定高度 */
+  display: flex; /* 使用 flexbox 居中加载动画 */
+  align-items: center; /* 垂直居中 */
+  justify-content: center; /* 水平居中 */
 }
 </style>

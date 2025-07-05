@@ -62,40 +62,53 @@
     </div>
     <div class="case-list-area">
       <el-scrollbar style="width: 100%; height: 480px">
-        <div class="case-list-flex">
-          <div
-            v-for="(item, index) in cases"
-            :key="item.id"
-            class="case-card-new"
-            :class="{ 'selected-card': index === selectIndex }"
-            @click="selectCase(index)"
-          >
-            <div class="case-card-content">
-              <div class="case-card-header">
-                <span class="case-title">{{ item.case_name }}</span>
-                <i
-                  class="iconfont icon-shoucang_shixin"
-                  :style="{
-                    marginLeft: 'auto',
-                    fontSize: '20px',
-                    color: item.isfavored ? '#409EFF' : 'rgb(199.5, 201, 204)',
-                    cursor: 'pointer',
-                  }"
-                  @click.stop="toggleFavorite(item)"
-                  title="收藏"
-                ></i>
-              </div>
-              <div class="case-card-row">
-                <span class="case-country">{{ item.country }}</span>
-                <span class="case-court">{{ item.court }}</span>
-                <span class="case-date">{{ item.judgement_date }}</span>
-              </div>
-              <div class="case-card-row">
-                <span class="case-tags">{{ lang === "zh" ? "标签" : "Tags" }}：{{ item.tags }}</span>
-                <a href="#" class="case-link">{{ lang === "zh" ? "查看" : "View" }}</a>
+        <div
+          class="case-list-flex"
+          v-loading="loadingCases"
+          element-loading-text="正在加载案件列表..."
+          element-loading-spinner="Loading"
+          element-loading-background="rgba(255, 255, 255, 0.8)"
+        >
+          <template v-if="!loadingCases && cases.length === 0">
+            <div class="no-cases-message">
+              {{ lang === 'zh' ? '暂无案件数据。' : 'No case data available.' }}
+            </div>
+          </template>
+          <template v-else>
+            <div
+              v-for="(item, index) in cases"
+              :key="item.id"
+              class="case-card-new"
+              :class="{ 'selected-card': index === selectIndex }"
+              @click="selectCase(index)"
+            >
+              <div class="case-card-content">
+                <div class="case-card-header">
+                  <span class="case-title">{{ item.case_name }}</span>
+                  <i
+                    class="iconfont icon-shoucang_shixin"
+                    :style="{
+                      marginLeft: 'auto',
+                      fontSize: '20px',
+                      color: item.isfavored ? '#409EFF' : 'rgb(199.5, 201, 204)',
+                      cursor: 'pointer',
+                    }"
+                    @click.stop="toggleFavorite(item)"
+                    title="收藏"
+                  ></i>
+                </div>
+                <div class="case-card-row">
+                  <span class="case-country">{{ item.country }}</span>
+                  <span class="case-court">{{ item.court }}</span>
+                  <span class="case-date">{{ item.judgement_date }}</span>
+                </div>
+                <div class="case-card-row">
+                  <span class="case-tags">{{ lang === "zh" ? "标签" : "Tags" }}：{{ item.tags }}</span>
+                  <a href="#" class="case-link">{{ lang === "zh" ? "查看" : "View" }}</a>
+                </div>
               </div>
             </div>
-          </div>
+          </template>
         </div>
       </el-scrollbar>
       <div style="padding: 8px 0; display: flex; justify-content: center; width: 100%">
@@ -130,7 +143,7 @@
         <i class="iconfont icon-xiazai" style="font-size: 16px; margin-left: 16px; color: rgb(121.3, 187.1, 255); cursor: pointer" @click="downloadWord"></i>
       </div>
       <div
-        style="
+        class="case-detail-container" style="
           width: 100%;
           border: 1px solid rgb(221.7, 222.6, 224.4);
           border-top: none;
@@ -142,6 +155,10 @@
           box-sizing: border-box;
           overflow-y: auto;
         "
+        v-loading="loadingDetail"
+        element-loading-text="正在加载案件详情..."
+        element-loading-spinner="Loading"
+        element-loading-background="rgba(255, 255, 255, 0.8)"
       >
         <div v-html="caseDetailHtml" class="case-detail-content"></div>
       </div>
@@ -155,19 +172,22 @@ import { useStore } from "vuex";
 import MarkdownIt from "markdown-it";
 import HtmlDocx from "html-docx-js/dist/html-docx";
 import { saveAs } from "file-saver";
-import api from "../api/index"; // 确保正确导入你的 API 模块
+import api from "../api/index";
 
 export default {
   name: "SearchCases",
   setup() {
     const store = useStore();
     const lang = computed(() => store.getters.lang);
-    const searchParams = computed(() => store.getters.searchParams); // 获取 Vuex 中的 searchParams
+    const searchParams = computed(() => store.getters.searchParams);
+
+    // 加载状态变量
+    const loadingCases = ref(false); // 控制案件列表加载动画
+    const loadingDetail = ref(false); // 控制案件详情加载动画
 
     // 筛选相关
     const isCollapsed = ref(true);
 
-    // 绑定到 Vuex 的 computed 属性 (filterCountry 和 filterTime 仍然与 searchParams 关联)
     const filterCountry = computed({
       get: () => searchParams.value.country,
       set: (value) => {
@@ -190,61 +210,73 @@ export default {
       { value: "korea", label: "韩国", enLabel: "Korea" },
     ];
 
-    // 案例数据：此数组将只包含当前页的案例
     const cases = ref([]);
-    const totalCasesCount = ref(0); // 用于分页的总数
-    const caseDetailContent = ref("暂无详细内容。"); // 用于存储 AI 分析结果
+    const totalCasesCount = ref(0);
+    const caseDetailContent = ref(""); // 初始值为空字符串，待加载
 
-    // 【重要变更】分页的当前页码和每页大小现在在组件内部管理
-    const page = ref(1); // 默认第一页
-    const pageSize = ref(6); // 默认每页6条 (如果你的后端或设计有默认值，请保持一致)
+    const page = ref(1);
+    const pageSize = ref(6);
 
-    // 搜索输入框绑定到 Vuex 的 computed 属性
     const searchText = computed({
       get: () => searchParams.value.keyword,
       set: (value) => {
         store.commit("setSearchKeyword", value);
-        // 搜索关键字变化时，重置本地页码并触发搜索
       },
     });
 
-    // 搜索方法，触发数据获取
     const performSearch = async () => {
+      loadingCases.value = true; // 开始加载案件列表
       try {
-        // 构建发送给 API 的参数，将分页参数从本地 ref 获取
         const params = {
           keyword: searchText.value,
           country: filterCountry.value,
           period: filterTime.value,
-          pagenum: page.value, // 使用本地页码
-          pagesize: pageSize.value, // 使用本地每页大小
-          language: lang.value, // 添加语言参数
+          pagenum: page.value,
+          pagesize: pageSize.value,
+          language: lang.value,
         };
 
-        console.log("搜索参数", params); // 打印即将发送的参数
+        console.log("搜索参数", params);
 
         const response = await api.searchCases(params);
-        console.log("API 响应:", response); // 打印 API 响应
+        console.log("API 响应:", response);
 
         cases.value = response.data.cases || [];
         totalCasesCount.value = response.data.totalCount || 0;
+
+        // 搜索完成后，默认选中第一个案例并获取其摘要
+        if (cases.value.length > 0) {
+          // 如果当前选中索引有效且在新数据中，则保持
+          // 否则，默认选中第一个
+          if (selectIndex.value === -1 || selectIndex.value >= cases.value.length) {
+            selectIndex.value = 0;
+          }
+          // getCaseSummary() 会在 selectIndex 的 watch 中触发
+        } else {
+          selectIndex.value = -1;
+          caseDetailContent.value = lang.value === 'zh' ? "暂无案件数据。" : "No case data available.";
+        }
+
       } catch (error) {
         console.error("搜索失败:", error);
         cases.value = [];
         totalCasesCount.value = 0;
+        selectIndex.value = -1; // 确保没有选中
         caseDetailContent.value = lang.value === 'zh' ? "获取案件列表失败。" : "Failed to retrieve case list.";
+      } finally {
+        loadingCases.value = false; // 结束加载案件列表
       }
     };
 
-    // 获取 AI 分析结果
     const getCaseSummary = async () => {
       if (selectIndex.value === -1 || !cases.value[selectIndex.value]) {
         caseDetailContent.value = lang.value === 'zh' ? "暂无详细内容。" : "No detailed content available.";
         return;
       }
+      loadingDetail.value = true; // 开始加载案件详情
       try {
         const params = {
-          caseId: cases.value[selectIndex.value].id, // 使用 item.id，与模拟数据保持一致
+          caseId: cases.value[selectIndex.value].id,
           language: lang.value,
         };
         console.log("获取 AI 分析结果的参数", params);
@@ -254,27 +286,19 @@ export default {
       } catch (error) {
         console.error("获取AI分析结果失败:", error);
         caseDetailContent.value = lang.value === 'zh' ? "获取 AI 分析结果失败。" : "Failed to retrieve AI analysis result.";
+      } finally {
+        loadingDetail.value = false; // 结束加载案件详情
       }
     };
 
-    // 按钮点击事件处理
     const doPerformSearch = () => {
-      // 重置页码为1，确保每次搜索从第一页开始
-      page.value = 1;
+      page.value = 1; // 每次点击搜索按钮时，重置页码为第一页
       performSearch();
-      // 搜索完成后，默认选中第一个案例并获取其摘要
-      if (cases.value.length > 0) {
-        selectIndex.value = 0;
-        // getCaseSummary() 会在 selectIndex 的 watch 中触发
-      } else {
-        selectIndex.value = -1;
-        caseDetailContent.value = lang.value === 'zh' ? "暂无详细内容。" : "No detailed content available.";
-      }
     };
-    // 收藏/取消收藏案件方法
+
     const toggleFavorite = async (item) => {
       const params = {
-        caseId: item.id, // 确保这里也是使用 item.id
+        caseId: item.id,
         userId: localStorage.getItem("userId"),
       };
       console.log("收藏/取消收藏案件的参数", params);
@@ -290,39 +314,31 @@ export default {
         }
       } catch (error) {
         console.error("收藏/取消收藏操作失败:", error);
-        item.isfavored = !item.isfavored; // 失败时回滚状态
+        item.isfavored = !item.isfavored;
       }
     };
 
-    // 初始加载数据 (页面首次加载时执行搜索)
-    onMounted(() => {
-      performSearch();
-      // 搜索完成后，默认选中第一个案例并获取其摘要
-      if (cases.value.length > 0) {
-        selectIndex.value = 0;
-        //getCaseSummary() 会在 selectIndex 的 watch 中触发
-      } else {
-        selectIndex.value = -1;
-        caseDetailContent.value = lang.value === 'zh' ? "暂无详细内容。" : "No detailed content available.";
-      }
-    });
+    const selectIndex = ref(-1);
 
-    const selectIndex = ref(-1); // 默认未选中任何案例
-
-    // 处理案件卡片点击事件
     const selectCase = (index) => {
       selectIndex.value = index;
     };
 
-    // 监听分页参数变化，触发搜索（如果 Element Plus 的 v-model 方式更新）
-    watch([page, pageSize, filterCountry, filterTime], () => {
-      // 当 page 或 pageSize 或筛选条件改变时，立即执行搜索
-      // 注意：这里不需要重置页码，因为 page 已经是变化后的新页码
-      // 当筛选条件变化时，page 会被 doPerformSearch 重置为 1
+    onMounted(() => {
+      // 从路由参数或 Vuex store 中获取初始搜索参数
+      // 可以在这里设置 initialSearch = store.getters.searchParams
+      // 如果从 HomeView 跳转过来，store 已经更新了 searchParams
+      // 因此直接调用 performSearch 即可，它会使用 store 中的参数
       performSearch();
     });
 
-    // 监听 selectIndex 变化，当选中的案例改变时，重新获取 AI 摘要
+    watch([page, pageSize, filterCountry, filterTime], () => {
+      // 这里的 watch 会在 page, pageSize, filterCountry, filterTime 任何一个变化时触发
+      // doPerformSearch 已经在点击搜索按钮时重置了 page.value 为 1，所以这里不需要重复重置
+      // 如果是分页器触发的 page 变化，或者筛选条件变化，这里会触发 performSearch
+      performSearch();
+    });
+
     watch(selectIndex, (newIndex) => {
       if (newIndex !== -1 && cases.value[newIndex]) {
         getCaseSummary();
@@ -332,15 +348,26 @@ export default {
     });
 
     watch(lang, () => {
-      const beforeIndex = selectIndex.value;
       console.log("Language changed to:", lang.value, ". Performing new search.");
-      performSearch();
-      // 语言切换后，保持选中状态并重新加载详情
-      // 注意：这里可能需要稍微延迟一下，确保 performSearch 拿到新数据后 selectIndex 再触发 getCaseSummary
-      // 或者在 getCaseSummary 中加入 loading 状态和 if(cases.value[newIndex]) 检查
-      // 目前的逻辑已经有 if(cases.value[newIndex]) 检查
-      selectIndex.value = beforeIndex;
-      // getCaseSummary(); // 已经在 watch(selectIndex) 中触发
+      // 语言切换时，重新执行搜索并尝试保持选中状态
+      const currentSelectedCaseId = cases.value[selectIndex.value]?.id;
+      performSearch().then(() => {
+        // 在新数据加载后，尝试重新选中之前的案例
+        if (currentSelectedCaseId) {
+          const newIndex = cases.value.findIndex(c => c.id === currentSelectedCaseId);
+          if (newIndex !== -1) {
+            selectIndex.value = newIndex;
+          } else if (cases.value.length > 0) {
+            selectIndex.value = 0; // 如果之前选中的案例在新列表中不存在，则选中第一个
+          } else {
+            selectIndex.value = -1;
+          }
+        } else if (cases.value.length > 0) {
+          selectIndex.value = 0; // 如果之前没有选中，则选中第一个
+        } else {
+          selectIndex.value = -1;
+        }
+      });
     });
 
     // 监听 cases 变化，如果当前 selectIndex 超出范围，则重置为0并尝试获取摘要
@@ -349,18 +376,16 @@ export default {
       (newCases) => {
         if (!newCases || newCases.length === 0) {
           selectIndex.value = -1;
-          caseDetailContent.value = lang.value === 'zh' ? "暂无详细内容。" : "No detailed content available.";
-        } else if (selectIndex.value >= newCases.length || selectIndex.value === -1) {
+          caseDetailContent.value = lang.value === 'zh' ? "暂无案件数据。" : "No detailed content available.";
+        } else if (selectIndex.value === -1 || selectIndex.value >= newCases.length) {
           selectIndex.value = 0; // 默认选中第一个
         }
       },
-      { immediate: true } // 初始加载时也运行一次
+      { immediate: true }
     );
 
     const md = new MarkdownIt();
     const caseDetailHtml = computed(() => {
-      // 在这里添加加载状态的判断，如果正在加载，显示加载提示
-      // 但是 caseDetailContent 已经是响应式的，所以直接 render 它的值即可
       return md.render(caseDetailContent.value);
     });
 
@@ -372,7 +397,6 @@ export default {
         return;
       }
 
-      // 获取当前国家选项的显示名称
       const displayCountry = (countryOptions.find(opt => opt.value === selectedCase.country) || {})[lang.value === 'zh' ? 'label' : 'enLabel'] || selectedCase.country;
 
       const html = `
@@ -423,7 +447,8 @@ export default {
       downloadWord,
       openOriginUrl,
       performSearch,
-      // detailLoading 不需要直接暴露到模板，因为它只在 getCaseSummary 内部控制加载提示
+      loadingCases, // 暴露给模板
+      loadingDetail, // 暴露给模板
     };
   },
 };
@@ -465,7 +490,29 @@ export default {
   margin-top: 8px;
   margin-bottom: 8px;
   width: 100%;
+  /* 为加载动画提供定位上下文 */
+  position: relative;
+  /* 确保在无数据时加载动画能完整显示 */
+  min-height: 200px; /* 调整此值以适应您的布局需求 */
+  align-items: center; /* 垂直居中加载动画 */
+  justify-content: center; /* 水平居中加载动画 */
 }
+
+/* 当没有案件数据时显示的消息 */
+.no-cases-message {
+  width: 100%;
+  text-align: center;
+  color: #606266;
+  font-size: 16px;
+  margin-top: 50px;
+}
+
+/* 确保加载文本不被截断或断行 */
+.case-list-flex :deep(.el-loading-text),
+.case-detail-container :deep(.el-loading-text) {
+  white-space: nowrap; /* 防止文本换行 */
+}
+
 .case-card-new {
   background: #f2f6fc;
   border-radius: 14px;
@@ -485,8 +532,6 @@ export default {
 .case-card-new.selected-card {
   border: 2px solid #409eff; /* 蓝色边框 */
   box-shadow: 0 4px 12px rgba(64, 158, 255, 0.2); /* 蓝色阴影 */
-  /* 可以根据需要调整，例如： */
-  /* background-color: #e6f7ff; */ /* 浅蓝色背景 */
 }
 .case-card-content {
   width: 100%;
@@ -543,10 +588,18 @@ export default {
   color: rgb(121.3, 187.1, 255);
 }
 .case-detail-content {
-  font-size: 15px; /* 你想要的大小 */
+  font-size: 15px;
   color: #222;
   line-height: 1.8;
+  /* 确保当内容很短时，加载动画依然能居中显示 */
+  min-height: 100px; /* 根据实际内容区域大小调整 */
 }
+
+/* 案件详情容器，添加定位属性以确保 v-loading 生效 */
+.case-detail-container {
+  position: relative;
+}
+
 .left-panel {
   position: absolute;
   top: 0;
